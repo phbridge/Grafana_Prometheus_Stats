@@ -33,24 +33,24 @@
 #
 # ToDo *******************TO DO*********************
 # 1.0 DONE Import credentials
-# 2.0 Run and collect raw data per command
-# 3.0 Filter the data for the stats
-# 4.0 Display stats for that device on the page
-# 5.0 Add argparse for debug and EULA
-#
+# 2.0 DONE Run and collect raw data per command
+# 3.0 DONE Filter the data for the stats
+# 4.0 DONE Display stats for that device on the page
+# 5.0 DONE Add argparse for debug and EULA
+# 6.0 Implement multiprocessing
+# 7.0 implement connection reuse
 #
 
-from flask import Flask
-from flask import Response
-import NAT_Stats_Credentials
-from datetime import datetime, timedelta
-import logging
-import logging.handlers
-import time
-import wsgiserver       #from gevent.wsgi
-import argparse
-import paramiko
-
+from flask import Flask             # Flask to serve pages
+from flask import Response          # Flask to serve pages
+import NAT_Stats_Credentials        # Imported credentials
+import logging.handlers             # Needed for loggin
+import time                         # Only for time.sleep
+import wsgiserver                   # from gevent.wsgi
+import argparse                     # Only used for debugging and EULA
+import paramiko                     # used for the SSH session
+import socket                       # only used to raise socket exceptions
+from multiprocessing import pool    # trying to run in parallel rather than in sequence
 
 server_IP = "127.0.0.1"
 server_port = 8082
@@ -62,12 +62,21 @@ logBytes = 1048576
 web_app = Flask('router_nat_stats')
 
 
+def run_command(session, command):
+    output = ""
+    session.send(command + "\n")
+    time.sleep(1)       # TODO implement something better than sleep here?
+    output = session.recv(65535).decode("utf-8")
+    return output
+
+
 def login_to_host(seed_hostname, seed_username, seed_password):
-    crawler_connection = paramiko.SSHClient()
-    crawler_connection.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+    crawler_connection_pre = paramiko.SSHClient()
+    crawler_connection_pre.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+    results = ""
     try:
-        #output_log.write(str(datetime.now()) + "     " + "attempt 1 logging onto host for prompt " + str(seed) + "\n")
-        crawler_connection.connect(hostname=seed_hostname,
+        logger.debug(seed_hostname + " Starting connection")
+        crawler_connection_pre.connect(hostname=seed_hostname,
                                    port=22,
                                    username=seed_username,
                                    password=seed_password,
@@ -75,87 +84,33 @@ def login_to_host(seed_hostname, seed_username, seed_password):
                                    allow_agent=False,
                                    timeout=10,
                                    auth_timeout=15)
-        crawler_connected = crawler_connection.invoke_shell()
-        time.sleep(5)
-        output = crawler_connected.recv(1000).decode("utf-8")
-        print(output)
-        prompt = output.splitlines()[-1].strip()
-        print(prompt)
-        # if prompt ends in # then handle if prompt ends in > then handle
-        # this is to catch logging in with limited privilage
-        if prompt.endswith(">"):
-            priv_prompt = str(prompt[:-1] + "#")
-        else:
-            priv_prompt = prompt
-
-        #output_log.write(str(datetime.now()) + "     " + "prompt for host " + str(seed_hostname) + " is " + str(prompt) + "\n")
-
-        crawler_talk = SSHClientInteraction(crawler_connection, timeout=15, display=False)
-
-        crawler_talk.expect(prompt)
-
-        if prompt.endswith(">"):
-            crawler_talk.expect("password: ")
-            crawler_talk.send(args.secret_password)
-        else:
-            crawler_talk.expect(priv_prompt)
-
-        crawler_talk.send("terminal exec prompt timestamp")
-        crawler_talk.expect(priv_prompt)
-        crawler_talk.send("terminal length 0")
-        crawler_talk.expect(priv_prompt)
-
-        crawler_talk.send("sho version | i Cisco IOS Software")
-        crawler_talk.expect(priv_prompt)
-        results = ""
-        if "XE Software" in str(crawler_talk.current_output):
-            active_nat_stats = get_active_nat_stats(crawler_talk, "XE")
-
-        elif "IOS Software" in str(crawler_talk.current_output):
-            active_nat_stats = get_active_nat_stats(crawler_talk, "IOS")
-
-        results += 'Active_NAT{host="%s"} %s\n' % (host['host'], str(active_nat_stats))
-        
+        logger.debug(seed_hostname + " Invoking Shell")
+        crawler_connected = crawler_connection_pre.get_transport().open_session()
+        crawler_connected.invoke_shell()
+        active_nat_stats_raw = run_command(crawler_connected, "sho ip nat statistics | i Total active translations")
+        logger.debug(seed_hostname + "raw nat output " + active_nat_stats_raw)
+        active_nat_stats = active_nat_stats_raw.splitlines()[-2].split(" ")[3]
+        logger.info(seed_hostname + "filtered output " + active_nat_stats)
+        results += 'Active_NAT{host="%s"} %s\n' % (seed_hostname, str(active_nat_stats))
         crawler_connected.close()
         return results
-        
 
     except paramiko.AuthenticationException:
-        print(str(datetime.now()) + "     " + str(seed_hostname) + " ======== Bad credentials ")
-        #output_log.write(str(datetime.now()) + "     " + str(seed_hostname) + " ======== Bad credentials ")
-        #output_results.write(str(datetime.now()) + "," + seed_hostname + "," + "Bad credentials" + "," + "Bad credentials" + "\n")
-        results += 'Active_NAT{host="%s"} %s\n' % (host['host'], "0")
+        logger.warning(seed_hostname + " ########## Auth Error ##########")
+        results += 'Active_NAT{host="%s"} %s (%s) \n' % (seed_hostname, "0", "########## Auth Error ##########")
         return results
     except paramiko.SSHException:
-        print(str(datetime.now()) + "     " + str(seed_hostname) + " ======== Issues with ssh service ")
-        #output_log.write(str(datetime.now()) + "     " + str(seed_hostname) + " ======== Issues with ssh service ")
-        #output_results.write(str(datetime.now()) + "," + seed_hostname + "," + "Issues with ssh service" + "," + "Issues with ssh service" + "\n")
-        results += 'Active_NAT{host="%s"} %s\n' % (host['host'], "0")
+        logger.warning(seed_hostname + " ########## SSH Error ##########")
+        results += 'Active_NAT{host="%s"} %s (%s) \n' % (seed_hostname, "0", "########## SSH Error ##########")
         return results
     except socket.error:
-        print(str(datetime.now()) + "     " + str(seed_hostname) + " ======== socket error ")
-        #output_log.write(str(datetime.now()) + "     " + str(seed_hostname) + " ======== socket error ")
-        #output_results.write(str(datetime.now()) + "," + seed_hostname + "," + "socket error" + "," + "socket error" + "\n")
-        results += 'Active_NAT{host="%s"} %s\n' % (host['host'], "0")
+        logger.warning(seed_hostname + " ########## Socket Error ##########")
+        results += 'Active_NAT{host="%s"} %s (%s) \n' % (seed_hostname, "0", "########## Socket Error ##########")
         return results
-    except Exception:
-        print(str(datetime.now()) + "     " + str(seed_hostname) + " ======== unknown error ")
-        #output_log.write(str(datetime.now()) + "     " + str(seed_hostname) + " ======== unknown error ")
-        #output_results.write(str(datetime.now()) + "," + seed_hostname + "," + "unknown error" + "," + "unknown error" + "\n")
-        results += 'Active_NAT{host="%s"} %s\n' % (host['host'], "0")
+    except Exception as e:
+        logger.warning(seed_hostname + " ########## Unknown Error " + str(e) + "##########")
+        results += 'Active_NAT{host="%s"} %s (%s) \n' % (seed_hostname, "0", "########## Unknown Error " + str(e) + "##########r")
         return results
-    print(host)
-    print(username)
-    print(password)
-    session = host
-    return session
-
-
-def get_active_nat_stats(session, software_type):
-    print("stats")
-    print(session)
-    active_nat_stats = "564322"
-    return active_nat_stats
 
 
 def parse_all_arguments():
@@ -164,7 +119,6 @@ def parse_all_arguments():
     parser.add_argument("-ACCEPTEULA", "--acceptedeula", action='store_true', default=False,
                         help="Marking this flag accepts EULA embedded withing the script")
     args = parser.parse_args()
-
     if not args.acceptedeula:
         print("""you need to accept the EULA agreement which is as follows:-
     # EULA
@@ -184,18 +138,17 @@ def parse_all_arguments():
         quit()
     return args
 
-# gets called via the http://your_server_ip:port/nat_stats
-
 
 @web_app.route('/nat_stats')
+# gets called via the http://your_server_ip:port/nat_stats
 def get_stats():
     results = ''
     for host in NAT_Stats_Credentials.hosts:
         logger.info("----------- Processing Host: %s -----------" % host['host'])
-        # login to router
+        # login to box
         results += login_to_host(host['host'], host['username'], host['password'])
-        # return the results to the caller
         logger.info("----------- Finished -----------")
+        # return text to service
     return Response(results, mimetype='text/plain')
 
 
@@ -212,11 +165,9 @@ if __name__ == '__main__':
     formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
     handler.setFormatter(formatter)
     logger.addHandler(handler)
-    logger.info("-" * 25)
+    logger.info("---------------------- STARTING ----------------------")
     logger.info("grafana_router_nat_stats script started")
-
-    http_server = wsgiserver.WSGIServer(host=server_IP, port=server_port, wsgi_app=web_app) #, log=logger)
-    #http_server.serve_forever()
+    http_server = wsgiserver.WSGIServer(host=server_IP, port=server_port, wsgi_app=web_app)
     http_server.start()
 
 
