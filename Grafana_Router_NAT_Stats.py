@@ -37,8 +37,9 @@
 # 3.0 DONE Filter the data for the stats
 # 4.0 DONE Display stats for that device on the page
 # 5.0 DONE Add argparse for debug and EULA
-# 6.0 Implement multiprocessing
-# 7.0 implement connection reuse
+# 6.0 DONE Implement multiprocessing
+# 7.0 Implement connection reuse - Ideally keep SSH connection open full time
+# 8.0 Something better than time.sleep() waiting for response.
 #
 
 from flask import Flask             # Flask to serve pages
@@ -50,15 +51,13 @@ import wsgiserver                   # from gevent.wsgi
 import argparse                     # Only used for debugging and EULA
 import paramiko                     # used for the SSH session
 import socket                       # only used to raise socket exceptions
-from multiprocessing import pool    # trying to run in parallel rather than in sequence
+from multiprocessing import Pool    # trying to run in parallel rather than in sequence
 
 server_IP = "127.0.0.1"
 server_port = 8082
-
 logFile = "grafana_router_nat_stats_%s_%s.log" % (server_IP, server_port)
 logCount = 4
 logBytes = 1048576
-
 web_app = Flask('router_nat_stats')
 
 
@@ -93,6 +92,7 @@ def login_to_host(seed_hostname, seed_username, seed_password):
         logger.info(seed_hostname + "filtered output " + active_nat_stats)
         results += 'Active_NAT{host="%s"} %s\n' % (seed_hostname, str(active_nat_stats))
         crawler_connected.close()
+        crawler_connection_pre.close()
         return results
 
     except paramiko.AuthenticationException:
@@ -111,6 +111,43 @@ def login_to_host(seed_hostname, seed_username, seed_password):
         logger.warning(seed_hostname + " ########## Unknown Error " + str(e) + "##########")
         results += 'Active_NAT{host="%s"} %s (%s) \n' % (seed_hostname, "0", "########## Unknown Error " + str(e) + "##########r")
         return results
+
+
+def processing_test(hostname, username, password):
+    longstring = str(hostname + username + password + "\n")
+    print("process")
+    print("begin wait")
+    time.sleep(10)
+    print("end wait")
+    print(str(hostname + username + password + "\n"))
+    return longstring
+
+
+def process_hosts_in_parallel():
+    logger.info("----------- Processing Parallel -----------")
+    results = ""
+    hosts = []
+    for each in NAT_Stats_Credentials.hosts:
+        host_details = []
+        host_details.append(each['host'])
+        host_details.append(each['username'])
+        host_details.append(each['password'])
+        hosts.append(host_details)
+    with Pool(processes=10) as process_worker:
+        results = process_worker.starmap(login_to_host, hosts)
+    return results
+
+
+def process_hosts_in_serial():
+    logger.info("----------- Processing Serial -----------")
+    results = ""
+    for host in NAT_Stats_Credentials.hosts:
+        logger.info("----------- Processing Host: %s -----------" % host['host'])
+        # login to box
+        results += login_to_host(host['host'], host['username'], host['password'])
+        logger.info("----------- Finished -----------")
+        # return text to service
+    return results
 
 
 def parse_all_arguments():
@@ -140,15 +177,10 @@ def parse_all_arguments():
 
 
 @web_app.route('/nat_stats')
-# gets called via the http://your_server_ip:port/nat_stats
+# gets called via the http://127.0.0.1:8082/nat_stats
 def get_stats():
-    results = ''
-    for host in NAT_Stats_Credentials.hosts:
-        logger.info("----------- Processing Host: %s -----------" % host['host'])
-        # login to box
-        results += login_to_host(host['host'], host['username'], host['password'])
-        logger.info("----------- Finished -----------")
-        # return text to service
+    #results = process_hosts_in_serial()
+    results = process_hosts_in_parallel()
     return Response(results, mimetype='text/plain')
 
 
@@ -169,5 +201,3 @@ if __name__ == '__main__':
     logger.info("grafana_router_nat_stats script started")
     http_server = wsgiserver.WSGIServer(host=server_IP, port=server_port, wsgi_app=web_app)
     http_server.start()
-
-
