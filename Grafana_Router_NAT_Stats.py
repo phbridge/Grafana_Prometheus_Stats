@@ -61,10 +61,10 @@ logBytes = 1048576
 web_app = Flask('router_nat_stats')
 
 
-def run_command(session, command):
+def run_command(session, command, wait):
     output = ""
     session.send(command + "\n")
-    time.sleep(1)       # TODO implement something better than sleep here?
+    time.sleep(wait)       # TODO implement something better than sleep here?
     output = session.recv(65535).decode("utf-8")
     return output
 
@@ -85,11 +85,21 @@ def login_to_host(seed_hostname, seed_username, seed_password):
         logger.debug(seed_hostname + " Invoking Shell")
         crawler_connected = crawler_connection_pre.get_transport().open_session()
         crawler_connected.invoke_shell()
-        active_nat_stats_raw = run_command(crawler_connected, "sho ip nat statistics | i Total active translations")
+        active_nat_stats_raw = run_command(crawler_connected, "sho ip nat statistics | i Total active translations", 1)
+        active_tcp_stats_raw = run_command(crawler_connected, "sho ip nat translations tcp | count tcp", 2)
+        active_udp_stats_raw = run_command(crawler_connected, "sho ip nat translations udp | count udp", 2)
+        active_icmp_stats_raw = run_command(crawler_connected, "sho ip nat translations icmp | count icmp", 2)
+
         logger.debug(seed_hostname + "raw nat output " + active_nat_stats_raw)
         active_nat_stats = active_nat_stats_raw.splitlines()[-2].split(" ")[3]
         logger.info(seed_hostname + "filtered output " + active_nat_stats)
-        results += 'Active_NAT{host="%s"} %s\n' % (seed_hostname, str(active_nat_stats))
+        active_nat_icmp = active_icmp_stats_raw.splitlines()[-2].split(" ")[7]
+        active_nat_udp = active_udp_stats_raw.splitlines()[-2].split(" ")[7]
+        active_nat_tcp = active_tcp_stats_raw.splitlines()[-2].split(" ")[7]
+        results += 'Active_NAT_Total{host="%s"} %s\n' % (seed_hostname, str(active_nat_stats))
+        results += 'Active_NAT_ICMP{host="%s"} %s\n' % (seed_hostname, str(active_nat_icmp))
+        results += 'Active_NAT_UDP{host="%s"} %s\n' % (seed_hostname, str(active_nat_udp))
+        results += 'Active_NAT_TCP{host="%s"} %s\n' % (seed_hostname, str(active_nat_tcp))
         crawler_connected.close()
         crawler_connection_pre.close()
         return results
