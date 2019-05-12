@@ -1,5 +1,5 @@
 # Title
-Grfana Router Nat Stats
+Grfana Router NAT Stats
  
 # Language
 Python 3.5
