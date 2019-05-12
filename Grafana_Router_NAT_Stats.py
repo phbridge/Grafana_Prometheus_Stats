@@ -54,7 +54,7 @@ import socket                       # only used to raise socket exceptions
 from multiprocessing import Pool    # trying to run in parallel rather than in sequence
 
 server_IP = "127.0.0.1"
-server_port = 8082
+server_port = 8085
 logFile = "grafana_router_nat_stats_%s_%s.log" % (server_IP, server_port)
 logCount = 4
 logBytes = 1048576
@@ -81,8 +81,7 @@ def login_to_host(seed_hostname, seed_username, seed_password):
                                    password=seed_password,
                                    look_for_keys=False,
                                    allow_agent=False,
-                                   timeout=10,
-                                   auth_timeout=15)
+                                   timeout=10)
         logger.debug(seed_hostname + " Invoking Shell")
         crawler_connected = crawler_connection_pre.get_transport().open_session()
         crawler_connected.invoke_shell()
