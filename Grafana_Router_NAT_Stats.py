@@ -132,7 +132,7 @@ def process_hosts_in_parallel():
         host_details.append(each['username'])
         host_details.append(each['password'])
         hosts.append(host_details)
-    with Pool(processes=10) as process_worker:
+    with Pool(processes=args.max_threads) as process_worker:
         results = process_worker.starmap(login_to_host, hosts)
     return results
 
@@ -152,6 +152,8 @@ def process_hosts_in_serial():
 def parse_all_arguments():
     parser = argparse.ArgumentParser(description='process input')
     parser.add_argument("-d", "--debug", action='store_true', default=False, help="increase output verbosity", )
+    parser.add_argument("-s", "--single_thread", action='store_true', default=False, help="run in single threaded mode")
+    parser.add_argument("-t", "--max_threads", default=10, help="max number of threads to run in parrellel")
     parser.add_argument("-ACCEPTEULA", "--acceptedeula", action='store_true', default=False,
                         help="Marking this flag accepts EULA embedded withing the script")
     args = parser.parse_args()
@@ -178,8 +180,10 @@ def parse_all_arguments():
 @web_app.route('/nat_stats')
 # gets called via the http://127.0.0.1:8082/nat_stats
 def get_stats():
-    #results = process_hosts_in_serial()
-    results = process_hosts_in_parallel()
+    if args.single_thread:
+        results = process_hosts_in_serial()
+    else:
+        results = process_hosts_in_parallel()
     return Response(results, mimetype='text/plain')
 
 
