@@ -26,6 +26,7 @@
 #
 # Version Control               Comments
 # Version 0.01 Date 06/05/19    Initial draft
+# Version 0.1  Date 17/05/19    Improved Error handling
 #
 # Version 6.9 Date xx/xx/xx     Took over world and actually got paid for value added work....If your reading this
 #                               approach me on Linked-In for details of weekend "daily" rate
@@ -55,7 +56,9 @@ from multiprocessing import Pool    # trying to run in parallel rather than in s
 
 server_IP = "127.0.0.1"
 server_port = 8085
-logFile = "grafana_router_nat_stats_%s_%s.log" % (server_IP, server_port)
+# Note absolute logfile path must exist when its run as a service else service will not start properly.
+logfile = "/home/phbridge/grafana_router_nat_stats_%s_%s.log" % (server_IP, server_port)
+# Note absolute logfile path must exist when its run as a service else service will not start properly.
 logCount = 4
 logBytes = 1048576
 web_app = Flask('router_nat_stats')
@@ -92,14 +95,29 @@ def login_to_host(seed_hostname, seed_username, seed_password):
 
         logger.debug(seed_hostname + "raw nat output " + active_nat_stats_raw)
         active_nat_stats = active_nat_stats_raw.splitlines()[-2].split(" ")[3]
-        logger.info(seed_hostname + "filtered output " + active_nat_stats)
-        active_nat_icmp = active_icmp_stats_raw.splitlines()[-2].split(" ")[7]
-        active_nat_udp = active_udp_stats_raw.splitlines()[-2].split(" ")[7]
-        active_nat_tcp = active_tcp_stats_raw.splitlines()[-2].split(" ")[7]
+        logger.info(seed_hostname + " active_nat_stats " + active_nat_stats)
         results += 'Active_NAT_Total{host="%s"} %s\n' % (seed_hostname, str(active_nat_stats))
-        results += 'Active_NAT_ICMP{host="%s"} %s\n' % (seed_hostname, str(active_nat_icmp))
-        results += 'Active_NAT_UDP{host="%s"} %s\n' % (seed_hostname, str(active_nat_udp))
-        results += 'Active_NAT_TCP{host="%s"} %s\n' % (seed_hostname, str(active_nat_tcp))
+        try:
+            active_nat_icmp = active_icmp_stats_raw.splitlines()[-2].split(" ")[7]
+            logger.info(seed_hostname + " active_nat_icmp " + active_nat_icmp)
+            results += 'Active_NAT_ICMP{host="%s"} %s\n' % (seed_hostname, str(active_nat_icmp))
+        except Exception as e:
+            logger.warning(seed_hostname + " ########## Unknown Error " + str(e) + "##########")
+            results += 'Active_NAT_ICMP{host="%s"} %s (%s) \n' % (seed_hostname, "0", "########## Unknown Error " + str(e) + "##########r")
+        try:
+            active_nat_udp = active_udp_stats_raw.splitlines()[-2].split(" ")[7]
+            logger.info(seed_hostname + " active_nat_udp " + active_nat_udp)
+            results += 'Active_NAT_UDP{host="%s"} %s\n' % (seed_hostname, str(active_nat_udp))
+        except Exception as e:
+            logger.warning(seed_hostname + " ########## Unknown Error " + str(e) + "##########")
+            results += 'Active_NAT_UDP{host="%s"} %s (%s) \n' % (seed_hostname, "0", "########## Unknown Error " + str(e) + "##########r")
+        try:
+            active_nat_tcp = active_tcp_stats_raw.splitlines()[-2].split(" ")[7]
+            logger.info(seed_hostname + " active_nat_tcp " + active_nat_tcp)
+            results += 'Active_NAT_TCP{host="%s"} %s\n' % (seed_hostname, str(active_nat_tcp))
+        except Exception as e:
+            logger.warning(seed_hostname + " ########## Unknown Error " + str(e) + "##########")
+            results += 'Active_NAT_TCP{host="%s"} %s (%s) \n' % (seed_hostname, "0", "########## Unknown Error " + str(e) + "##########r")
         crawler_connected.close()
         crawler_connection_pre.close()
         return results
@@ -206,7 +224,7 @@ if __name__ == '__main__':
         logger.setLevel(logging.DEBUG)
     else:
         logger.setLevel(logging.INFO)
-    handler = logging.handlers.RotatingFileHandler(logFile, maxBytes=logBytes, backupCount=logCount)
+    handler = logging.handlers.RotatingFileHandler(logfile, maxBytes=logBytes, backupCount=logCount)
     formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
     handler.setFormatter(formatter)
     logger.addHandler(handler)
