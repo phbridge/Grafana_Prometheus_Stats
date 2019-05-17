@@ -88,10 +88,10 @@ def login_to_host(seed_hostname, seed_username, seed_password):
         logger.debug(seed_hostname + " Invoking Shell")
         crawler_connected = crawler_connection_pre.get_transport().open_session()
         crawler_connected.invoke_shell()
-        active_nat_stats_raw = run_command(crawler_connected, "sho ip nat statistics | i Total active translations", 3)
-        active_tcp_stats_raw = run_command(crawler_connected, "sho ip nat translations tcp | count tcp", 3)
-        active_udp_stats_raw = run_command(crawler_connected, "sho ip nat translations udp | count udp", 3)
-        active_icmp_stats_raw = run_command(crawler_connected, "sho ip nat translations icmp | count icmp", 3)
+        active_nat_stats_raw = run_command(crawler_connected, "sho ip nat statistics | i Total active translations", 2)
+        active_tcp_stats_raw = run_command(crawler_connected, "sho ip nat translations tcp | count tcp", 2)
+        active_udp_stats_raw = run_command(crawler_connected, "sho ip nat translations udp | count udp", 4)
+        active_icmp_stats_raw = run_command(crawler_connected, "sho ip nat translations icmp | count icmp", 2)
 
         logger.debug(seed_hostname + "raw nat output " + active_nat_stats_raw)
         active_nat_stats = active_nat_stats_raw.splitlines()[-2].split(" ")[3]
