@@ -90,7 +90,7 @@ def login_to_host(seed_hostname, seed_username, seed_password):
         crawler_connected.invoke_shell()
         active_nat_stats_raw = run_command(crawler_connected, "sho ip nat statistics | i Total active translations", 2)
         active_tcp_stats_raw = run_command(crawler_connected, "sho ip nat translations tcp | count tcp", 2)
-        active_udp_stats_raw = run_command(crawler_connected, "sho ip nat translations udp | count udp", 4)
+        active_udp_stats_raw = run_command(crawler_connected, "sho ip nat translations udp | count udp", 6)
         active_icmp_stats_raw = run_command(crawler_connected, "sho ip nat translations icmp | count icmp", 2)
 
         logger.debug(seed_hostname + "raw nat output " + active_nat_stats_raw)
