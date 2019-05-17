@@ -103,21 +103,21 @@ def login_to_host(seed_hostname, seed_username, seed_password):
             results += 'Active_NAT_ICMP{host="%s"} %s\n' % (seed_hostname, str(active_nat_icmp))
         except Exception as e:
             logger.warning(seed_hostname + " ########## Unknown Error " + str(e) + "##########")
-            results += 'Active_NAT_ICMP{host="%s"} %s (%s) \n' % (seed_hostname, "0", "########## Unknown Error " + str(e) + "##########r")
+            results += 'Active_NAT_ICMP{host="%s"} %s (%s) \n' % (seed_hostname, "0", "########## Unknown Error ICMP " + str(e) + "##########r")
         try:
             active_nat_udp = active_udp_stats_raw.splitlines()[-2].split(" ")[7]
             logger.info(seed_hostname + " active_nat_udp " + active_nat_udp)
             results += 'Active_NAT_UDP{host="%s"} %s\n' % (seed_hostname, str(active_nat_udp))
         except Exception as e:
             logger.warning(seed_hostname + " ########## Unknown Error " + str(e) + "##########")
-            results += 'Active_NAT_UDP{host="%s"} %s (%s) \n' % (seed_hostname, "0", "########## Unknown Error " + str(e) + "##########r")
+            results += 'Active_NAT_UDP{host="%s"} %s (%s) \n' % (seed_hostname, "0", "########## Unknown Error NAT " + str(e) + "##########r")
         try:
             active_nat_tcp = active_tcp_stats_raw.splitlines()[-2].split(" ")[7]
             logger.info(seed_hostname + " active_nat_tcp " + active_nat_tcp)
             results += 'Active_NAT_TCP{host="%s"} %s\n' % (seed_hostname, str(active_nat_tcp))
         except Exception as e:
             logger.warning(seed_hostname + " ########## Unknown Error " + str(e) + "##########")
-            results += 'Active_NAT_TCP{host="%s"} %s (%s) \n' % (seed_hostname, "0", "########## Unknown Error " + str(e) + "##########r")
+            results += 'Active_NAT_TCP{host="%s"} %s (%s) \n' % (seed_hostname, "0", "########## Unknown Error TCP " + str(e) + "##########r")
         crawler_connected.close()
         crawler_connection_pre.close()
         return results
