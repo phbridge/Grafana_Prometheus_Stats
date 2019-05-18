@@ -157,10 +157,55 @@ def login_to_host(seed_hostname, seed_username, seed_password, device_OS):
         crawler_connected = crawler_connection_pre.get_transport().open_session()
         crawler_connected.invoke_shell()
 
+        run_command(crawler_connected, "terminal length 0", 1)
+
         results += get_total_nat_translations(crawler_connected, device_OS, seed_hostname)
         results += get_total_tcp_nat_translations(crawler_connected, device_OS, seed_hostname)
         results += get_total_udp_nat_translations(crawler_connected, device_OS, seed_hostname)
         results += get_total_icmp_nat_translations(crawler_connected, device_OS, seed_hostname)
+
+        qos_output_raw = run_command(crawler_connected, "sho policy-map interface | i Class|pkts|drops", 1)
+        QoS_PLAT_Pkts = qos_output_raw.splitlines()[-19].split(" ")[-1].split("/")[0]
+        results += 'QoS_PLAT_Pkts{host="%s"} %s\n' % (seed_hostname, str(QoS_PLAT_Pkts))
+        QoS_PLAT_Bytes = qos_output_raw.splitlines()[-19].split(" ")[-1].split("/")[1]
+        results += 'QoS_PLAT_Bytes{host="%s"} %s\n' % (seed_hostname, str(QoS_PLAT_Bytes))
+        QoS_PLAT_Drops = qos_output_raw.splitlines()[-20].split("/")[-2]
+        results += 'QoS_PLAT_Drops{host="%s"} %s\n' % (seed_hostname, str(QoS_PLAT_Drops))
+
+        QoS_GOLD_Pkts = qos_output_raw.splitlines()[-14].split(" ")[-1].split("/")[0]
+        results += 'QoS_GOLD_Pkts{host="%s"} %s\n' % (seed_hostname, str(QoS_GOLD_Pkts))
+        QoS_GOLD_Bytes = qos_output_raw.splitlines()[-14].split(" ")[-1].split("/")[1]
+        results += 'QoS_GOLD_Bytes{host="%s"} %s\n' % (seed_hostname, str(QoS_GOLD_Bytes))
+        QoS_GOLD_Drops = qos_output_raw.splitlines()[-15].split("/")[-2]
+        results += 'QoS_GOLD_Drops{host="%s"} %s\n' % (seed_hostname, str(QoS_GOLD_Drops))
+
+        QoS_SILVER_Pkts = qos_output_raw.splitlines()[-11].split(" ")[-1].split("/")[0]
+        results += 'QoS_SILVER_Pkts{host="%s"} %s\n' % (seed_hostname, str(QoS_SILVER_Pkts))
+        QoS_SILVER_Bytes = qos_output_raw.splitlines()[-11].split(" ")[-1].split("/")[1]
+        results += 'QoS_SILVER_Bytes{host="%s"} %s\n' % (seed_hostname, str(QoS_SILVER_Bytes))
+        QoS_SILVER_Drops = qos_output_raw.splitlines()[-12].split("/")[-2]
+        results += 'QoS_SILVER_Drops{host="%s"} %s\n' % (seed_hostname, str(QoS_SILVER_Drops))
+
+        QoS_BRONZE_Pkts = qos_output_raw.splitlines()[-8].split(" ")[-1].split("/")[0]
+        results += 'QoS_BRONZE_Pkts{host="%s"} %s\n' % (seed_hostname, str(QoS_BRONZE_Pkts))
+        QoS_BRONZE_Bytes = qos_output_raw.splitlines()[-8].split(" ")[-1].split("/")[1]
+        results += 'QoS_BRONZE_Bytes{host="%s"} %s\n' % (seed_hostname, str(QoS_BRONZE_Bytes))
+        QoS_BRONZE_Drops = qos_output_raw.splitlines()[-9].split("/")[-2]
+        results += 'QoS_BRONZE_Drops{host="%s"} %s\n' % (seed_hostname, str(QoS_BRONZE_Drops))
+
+        QoS_TIN_Pkts = qos_output_raw.splitlines()[-5].split(" ")[-1].split("/")[0]
+        results += 'QoS_TIN_Pkts{host="%s"} %s\n' % (seed_hostname, str(QoS_TIN_Pkts))
+        QoS_TIN_Bytes = qos_output_raw.splitlines()[-5].split(" ")[-1].split("/")[1]
+        results += 'QoS_TIN_Bytes{host="%s"} %s\n' % (seed_hostname, str(QoS_TIN_Bytes))
+        QoS_TIN_Drops = qos_output_raw.splitlines()[-6].split("/")[-2]
+        results += 'QoS_TIN_Drops{host="%s"} %s\n' % (seed_hostname, str(QoS_TIN_Drops))
+
+        QoS_DEFAULT_Pkts = qos_output_raw.splitlines()[-2].split(" ")[-1].split("/")[0]
+        results += 'QoS_DEFAULT_Pkts{host="%s"} %s\n' % (seed_hostname, str(QoS_DEFAULT_Pkts))
+        QoS_DEFAULT_Bytes = qos_output_raw.splitlines()[-2].split(" ")[-1].split("/")[1]
+        results += 'QoS_DEFAULT_Bytes{host="%s"} %s\n' % (seed_hostname, str(QoS_DEFAULT_Bytes))
+        QoS_DEFAULT_Drops = qos_output_raw.splitlines()[-3].split("/")[-2]
+        results += 'QoS_DEFAULT_Drops{host="%s"} %s\n' % (seed_hostname, str(QoS_DEFAULT_Drops))
 
         crawler_connected.close()
         crawler_connection_pre.close()
