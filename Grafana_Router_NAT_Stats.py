@@ -58,8 +58,7 @@ from multiprocessing import Pool    # trying to run in parallel rather than in s
 server_IP = "127.0.0.1"
 server_port = 8085
 # Note absolute logfile path must exist when its run as a service else service will not start properly.
-logfile = "grafana_router_nat_stats_%s_%s.log" % (server_IP, server_port)
-unused = "/home/phbridge/"
+logfile = "/home/phbridge/grafana_router_nat_stats_%s_%s.log" % (server_IP, server_port)
 # Note absolute logfile path must exist when its run as a service else service will not start properly.
 logCount = 4
 logBytes = 1048576
