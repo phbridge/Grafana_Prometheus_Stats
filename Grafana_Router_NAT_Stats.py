@@ -27,6 +27,7 @@
 # Version Control               Comments
 # Version 0.01 Date 06/05/19    Initial draft
 # Version 0.1  Date 17/05/19    Improved Error handling
+# Version 0.2  Date 18/05/19    Restructured some code to work better of various OS's
 #
 # Version 6.9 Date xx/xx/xx     Took over world and actually got paid for value added work....If your reading this
 #                               approach me on Linked-In for details of weekend "daily" rate
@@ -57,7 +58,8 @@ from multiprocessing import Pool    # trying to run in parallel rather than in s
 server_IP = "127.0.0.1"
 server_port = 8085
 # Note absolute logfile path must exist when its run as a service else service will not start properly.
-logfile = "/home/phbridge/grafana_router_nat_stats_%s_%s.log" % (server_IP, server_port)
+logfile = "grafana_router_nat_stats_%s_%s.log" % (server_IP, server_port)
+unused = "/home/phbridge/"
 # Note absolute logfile path must exist when its run as a service else service will not start properly.
 logCount = 4
 logBytes = 1048576
@@ -72,7 +74,74 @@ def run_command(session, command, wait):
     return output
 
 
-def login_to_host(seed_hostname, seed_username, seed_password):
+def get_total_nat_translations(session, os_type, seed_hostname):
+    if os_type == "IOS-XE":
+        active_nat_stats_raw = run_command(session, "sho ip nat statistics | i Total active translations", 1)
+    elif os_type == "IOS":
+        active_nat_stats_raw = run_command(session, "sho ip nat statistics | i Total active translations", 1)
+    else:
+        #TODO return this as Error
+        results = 'Active_NAT_Total{host="%s"} %s (%s) \n' % (seed_hostname, "0", "########## OS Not Supported for Active_NAT_Total ##########")
+        return results
+    logger.debug(seed_hostname + "raw nat output " + active_nat_stats_raw)
+    active_nat_stats = active_nat_stats_raw.splitlines()[-2].split(" ")[3]
+    logger.info(seed_hostname + " active_nat_stats " + active_nat_stats)
+    results = 'Active_NAT_Total{host="%s"} %s\n' % (seed_hostname, str(active_nat_stats))
+    return results
+
+
+def get_total_tcp_nat_translations(session, os_type, seed_hostname):
+    if os_type == "IOS-XE":
+        active_nat_stats_raw = run_command(session, "sho ip nat translations tcp total", 1)
+        active_nat_stats = active_nat_stats_raw.splitlines()[-3].split(" ")[4]
+    elif os_type == "IOS":
+        active_nat_stats_raw = run_command(session, "sho ip nat translations tcp | count tcp", 1)
+        active_nat_stats = active_nat_stats_raw.splitlines()[-2].split(" ")[7]
+    else:
+        #TODO return this as Error
+        results = 'Active_NAT_TCP{host="%s"} %s (%s) \n' % (seed_hostname, "0", "########## OS Not Supported for Active_NAT_TCP ##########")
+        return results
+    logger.debug(seed_hostname + "raw nat output " + active_nat_stats_raw)
+    logger.info(seed_hostname + " active_nat_tcp_stats " + active_nat_stats)
+    results = 'Active_NAT_TCP{host="%s"} %s\n' % (seed_hostname, str(active_nat_stats))
+    return results
+
+
+def get_total_udp_nat_translations(session, os_type, seed_hostname):
+    if os_type == "IOS-XE":
+        active_nat_stats_raw = run_command(session, "sho ip nat translations udp total", 1)
+        active_nat_stats = active_nat_stats_raw.splitlines()[-3].split(" ")[4]
+    elif os_type == "IOS":
+        active_nat_stats_raw = run_command(session, "sho ip nat translations udp | count udp", 1)
+        active_nat_stats = active_nat_stats_raw.splitlines()[-2].split(" ")[7]
+    else:
+        #TODO return this as Error
+        results = 'Active_NAT_UDP{host="%s"} %s (%s) \n' % (seed_hostname, "0", "########## OS Not Supported for Active_NAT_UDP ##########")
+        return results
+    logger.debug(seed_hostname + "raw nat output " + active_nat_stats_raw)
+    logger.info(seed_hostname + " active_nat_tcp_stats " + active_nat_stats)
+    results = 'Active_NAT_UDP{host="%s"} %s\n' % (seed_hostname, str(active_nat_stats))
+    return results
+
+
+def get_total_icmp_nat_translations(session, os_type, seed_hostname):
+    if os_type == "IOS-XE":
+        active_nat_stats_raw = run_command(session, "sho ip nat translations icmp total", 1)
+        active_nat_stats = active_nat_stats_raw.splitlines()[-3].split(" ")[4]
+    elif os_type == "IOS":
+        active_nat_stats_raw = run_command(session, "sho ip nat translations icmp | count icmp", 1)
+        active_nat_stats = active_nat_stats_raw.splitlines()[-2].split(" ")[7]
+    else:
+        #TODO return this as Error
+        results = 'Active_NAT_ICMP{host="%s"} %s (%s) \n' % (seed_hostname, "0", "########## OS Not Supported for Active_NAT_ICMP ##########")
+        return results
+    logger.debug(seed_hostname + "raw nat output " + active_nat_stats_raw)
+    logger.info(seed_hostname + " active_nat_tcp_stats " + active_nat_stats)
+    results = 'Active_NAT_ICMP{host="%s"} %s\n' % (seed_hostname, str(active_nat_stats))
+    return results
+
+
+def login_to_host(seed_hostname, seed_username, seed_password, device_OS):
     crawler_connection_pre = paramiko.SSHClient()
     crawler_connection_pre.set_missing_host_key_policy(paramiko.AutoAddPolicy())
     results = ""
@@ -88,36 +157,12 @@ def login_to_host(seed_hostname, seed_username, seed_password):
         logger.debug(seed_hostname + " Invoking Shell")
         crawler_connected = crawler_connection_pre.get_transport().open_session()
         crawler_connected.invoke_shell()
-        active_nat_stats_raw = run_command(crawler_connected, "sho ip nat statistics | i Total active translations", 3)
-        active_tcp_stats_raw = run_command(crawler_connected, "sho ip nat translations tcp | count tcp", 3)
-        active_udp_stats_raw = run_command(crawler_connected, "sho ip nat translations udp | count udp", 10)
-        active_icmp_stats_raw = run_command(crawler_connected, "sho ip nat translations icmp | count icmp", 3)
 
-        logger.debug(seed_hostname + "raw nat output " + active_nat_stats_raw)
-        active_nat_stats = active_nat_stats_raw.splitlines()[-2].split(" ")[3]
-        logger.info(seed_hostname + " active_nat_stats " + active_nat_stats)
-        results += 'Active_NAT_Total{host="%s"} %s\n' % (seed_hostname, str(active_nat_stats))
-        try:
-            active_nat_icmp = active_icmp_stats_raw.splitlines()[-2].split(" ")[7]
-            logger.info(seed_hostname + " active_nat_icmp " + active_nat_icmp)
-            results += 'Active_NAT_ICMP{host="%s"} %s\n' % (seed_hostname, str(active_nat_icmp))
-        except Exception as e:
-            logger.warning(seed_hostname + " ########## Unknown Error " + str(e) + "##########")
-            results += 'Active_NAT_ICMP{host="%s"} %s (%s) \n' % (seed_hostname, "0", "########## Unknown Error ICMP " + str(e) + "##########r")
-        try:
-            active_nat_udp = active_udp_stats_raw.splitlines()[-2].split(" ")[7]
-            logger.info(seed_hostname + " active_nat_udp " + active_nat_udp)
-            results += 'Active_NAT_UDP{host="%s"} %s\n' % (seed_hostname, str(active_nat_udp))
-        except Exception as e:
-            logger.warning(seed_hostname + " ########## Unknown Error " + str(e) + "##########")
-            results += 'Active_NAT_UDP{host="%s"} %s (%s) \n' % (seed_hostname, "0", "########## Unknown Error NAT " + str(e) + "##########r")
-        try:
-            active_nat_tcp = active_tcp_stats_raw.splitlines()[-2].split(" ")[7]
-            logger.info(seed_hostname + " active_nat_tcp " + active_nat_tcp)
-            results += 'Active_NAT_TCP{host="%s"} %s\n' % (seed_hostname, str(active_nat_tcp))
-        except Exception as e:
-            logger.warning(seed_hostname + " ########## Unknown Error " + str(e) + "##########")
-            results += 'Active_NAT_TCP{host="%s"} %s (%s) \n' % (seed_hostname, "0", "########## Unknown Error TCP " + str(e) + "##########r")
+        results += get_total_nat_translations(crawler_connected, device_OS, seed_hostname)
+        results += get_total_tcp_nat_translations(crawler_connected, device_OS, seed_hostname)
+        results += get_total_udp_nat_translations(crawler_connected, device_OS, seed_hostname)
+        results += get_total_icmp_nat_translations(crawler_connected, device_OS, seed_hostname)
+
         crawler_connected.close()
         crawler_connection_pre.close()
         return results
@@ -159,6 +204,7 @@ def process_hosts_in_parallel():
         host_details.append(each['host'])
         host_details.append(each['username'])
         host_details.append(each['password'])
+        host_details.append(each['OS'])
         hosts.append(host_details)
     with Pool(processes=args.max_threads) as process_worker:
         results = process_worker.starmap(login_to_host, hosts)
@@ -171,7 +217,7 @@ def process_hosts_in_serial():
     for host in NAT_Stats_Credentials.hosts:
         logger.info("----------- Processing Host: %s -----------" % host['host'])
         # login to box
-        results += login_to_host(host['host'], host['username'], host['password'])
+        results += login_to_host(host['host'], host['username'], host['password'], host['OS'])
         logger.info("----------- Finished -----------")
         # return text to service
     return results
