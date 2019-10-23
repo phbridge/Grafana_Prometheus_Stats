@@ -80,7 +80,7 @@ def get_total_nat_translations(session, os_type, seed_hostname):
         active_nat_stats_raw = run_command(session, "sho ip nat statistics | i Total active translations", 1)
     else:
         #TODO return this as Error
-        results = 'Active_NAT_Total{host="%s"} %s (%s) \n' % (seed_hostname, "0", "########## OS Not Supported for Active_NAT_Total ##########")
+        #results = 'Active_NAT_Total{host="%s"} %s (%s) \n' % (seed_hostname, "0", "########## OS Not Supported for Active_NAT_Total ##########")
         return results
     logger.debug(seed_hostname + "raw nat output " + active_nat_stats_raw)
     active_nat_stats = active_nat_stats_raw.splitlines()[-2].split(" ")[3]
@@ -98,7 +98,7 @@ def get_total_tcp_nat_translations(session, os_type, seed_hostname):
         active_nat_stats = active_nat_stats_raw.splitlines()[-2].split(" ")[7]
     else:
         #TODO return this as Error
-        results = 'Active_NAT_TCP{host="%s"} %s (%s) \n' % (seed_hostname, "0", "########## OS Not Supported for Active_NAT_TCP ##########")
+        #results = 'Active_NAT_TCP{host="%s"} %s (%s) \n' % (seed_hostname, "0", "########## OS Not Supported for Active_NAT_TCP ##########")
         return results
     logger.debug(seed_hostname + "raw nat output " + active_nat_stats_raw)
     logger.info(seed_hostname + " active_nat_tcp_stats " + active_nat_stats)
@@ -115,7 +115,7 @@ def get_total_udp_nat_translations(session, os_type, seed_hostname):
         active_nat_stats = active_nat_stats_raw.splitlines()[-2].split(" ")[7]
     else:
         #TODO return this as Error
-        results = 'Active_NAT_UDP{host="%s"} %s (%s) \n' % (seed_hostname, "0", "########## OS Not Supported for Active_NAT_UDP ##########")
+        #results = 'Active_NAT_UDP{host="%s"} %s (%s) \n' % (seed_hostname, "0", "########## OS Not Supported for Active_NAT_UDP ##########")
         return results
     logger.debug(seed_hostname + "raw nat output " + active_nat_stats_raw)
     logger.info(seed_hostname + " active_nat_tcp_stats " + active_nat_stats)
@@ -132,7 +132,7 @@ def get_total_icmp_nat_translations(session, os_type, seed_hostname):
         active_nat_stats = active_nat_stats_raw.splitlines()[-2].split(" ")[7]
     else:
         #TODO return this as Error
-        results = 'Active_NAT_ICMP{host="%s"} %s (%s) \n' % (seed_hostname, "0", "########## OS Not Supported for Active_NAT_ICMP ##########")
+        #results = 'Active_NAT_ICMP{host="%s"} %s (%s) \n' % (seed_hostname, "0", "########## OS Not Supported for Active_NAT_ICMP ##########")
         return results
     logger.debug(seed_hostname + "raw nat output " + active_nat_stats_raw)
     logger.info(seed_hostname + " active_nat_tcp_stats " + active_nat_stats)
@@ -317,19 +317,19 @@ def login_to_host(seed_hostname, seed_username, seed_password, device_OS):
 
     except paramiko.AuthenticationException:
         logger.warning(seed_hostname + " ########## Auth Error ##########")
-        results += 'Active_NAT{host="%s"} %s (%s) \n' % (seed_hostname, "0", "########## Auth Error ##########")
+        #results += 'Active_NAT{host="%s"} %s (%s) \n' % (seed_hostname, "0", "########## Auth Error ##########")
         return results
     except paramiko.SSHException:
         logger.warning(seed_hostname + " ########## SSH Error ##########")
-        results += 'Active_NAT{host="%s"} %s (%s) \n' % (seed_hostname, "0", "########## SSH Error ##########")
+        #results += 'Active_NAT{host="%s"} %s (%s) \n' % (seed_hostname, "0", "########## SSH Error ##########")
         return results
     except socket.error:
         logger.warning(seed_hostname + " ########## Socket Error ##########")
-        results += 'Active_NAT{host="%s"} %s (%s) \n' % (seed_hostname, "0", "########## Socket Error ##########")
+        #results += 'Active_NAT{host="%s"} %s (%s) \n' % (seed_hostname, "0", "########## Socket Error ##########")
         return results
     except Exception as e:
         logger.warning(seed_hostname + " ########## Unknown Error " + str(e) + "##########")
-        results += 'Active_NAT{host="%s"} %s (%s) \n' % (seed_hostname, "0", "########## Unknown Error " + str(e) + "##########r")
+        #results += 'Active_NAT{host="%s"} %s (%s) \n' % (seed_hostname, "0", "########## Unknown Error " + str(e) + "##########r")
         return results
 
 
