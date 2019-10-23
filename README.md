@@ -1,5 +1,5 @@
 # Title
-Grfana Router NAT Stats
+Grfana Router NAT&QoS Stats
  
 # Language
 Python 3.5
@@ -8,6 +8,7 @@ Python 3.5
 This script will pull the NAT stats from a router (not avalable via SNMP) and display them on a page so that
 Prometheus can then pull the page and get the latest stats. The same script can also be easily modified to pull
 other stats from a router via CLI.
+It will also pull some QoS Stats as I was troubleshooting it onetime :-)
 
 # Contacts
 Phil Bridges - phbridge@cisco.com
