@@ -166,107 +166,107 @@ def login_to_host(seed_hostname, seed_username, seed_password, device_OS):
 
         qos_output_raw = run_command(crawler_connected, "sho policy-map interface output | i pkts|no-buffer", 1)
         QoS_PLAT_Pkts = qos_output_raw.splitlines()[-12].split(" ")[-1].split("/")[0]
-        results += 'QoS_PLAT_IN_Pkts{host="%s"} %s\n' % (seed_hostname, str(QoS_PLAT_Pkts))
+        results += 'QoS_PLAT_OUT_Pkts{host="%s"} %s\n' % (seed_hostname, str(QoS_PLAT_Pkts))
         results += 'QoS_PLAT_Pkts{host="%s"} %s\n' % (seed_hostname, str(QoS_PLAT_Pkts))
         QoS_PLAT_Bytes = qos_output_raw.splitlines()[-12].split(" ")[-1].split("/")[1]
-        results += 'QoS_PLAT_IN_Bytes{host="%s"} %s\n' % (seed_hostname, str(QoS_PLAT_Bytes))
+        results += 'QoS_PLAT_OUT_Bytes{host="%s"} %s\n' % (seed_hostname, str(QoS_PLAT_Bytes))
         results += 'QoS_PLAT_Bytes{host="%s"} %s\n' % (seed_hostname, str(QoS_PLAT_Bytes))
-        QoS_PLAT_Drops = qos_output_raw.splitlines()[-13].split("/")[-2]
-        results += 'QoS_PLAT_IN_Drops{host="%s"} %s\n' % (seed_hostname, str(QoS_PLAT_Drops))
+        QoS_PLAT_Drops = qos_output_raw.splitlines()[-13].split("/")[2]
+        results += 'QoS_PLAT_OUT_Drops{host="%s"} %s\n' % (seed_hostname, str(QoS_PLAT_Drops))
         results += 'QoS_PLAT_Drops{host="%s"} %s\n' % (seed_hostname, str(QoS_PLAT_Drops))
 
         QoS_GOLD_Pkts = qos_output_raw.splitlines()[-10].split(" ")[-1].split("/")[0]
-        results += 'QoS_GOLD_IN_Pkts{host="%s"} %s\n' % (seed_hostname, str(QoS_GOLD_Pkts))
+        results += 'QoS_GOLD_OUT_Pkts{host="%s"} %s\n' % (seed_hostname, str(QoS_GOLD_Pkts))
         results += 'QoS_GOLD_Pkts{host="%s"} %s\n' % (seed_hostname, str(QoS_GOLD_Pkts))
         QoS_GOLD_Bytes = qos_output_raw.splitlines()[-10].split(" ")[-1].split("/")[1]
-        results += 'QoS_GOLD_IN_Bytes{host="%s"} %s\n' % (seed_hostname, str(QoS_GOLD_Bytes))
+        results += 'QoS_GOLD_OUT_Bytes{host="%s"} %s\n' % (seed_hostname, str(QoS_GOLD_Bytes))
         results += 'QoS_GOLD_Bytes{host="%s"} %s\n' % (seed_hostname, str(QoS_GOLD_Bytes))
-        QoS_GOLD_Drops = qos_output_raw.splitlines()[-11].split("/")[-2]
-        results += 'QoS_GOLD_IN_Drops{host="%s"} %s\n' % (seed_hostname, str(QoS_GOLD_Drops))
+        QoS_GOLD_Drops = qos_output_raw.splitlines()[-11].split("/")[2]
+        results += 'QoS_GOLD_OUT_Drops{host="%s"} %s\n' % (seed_hostname, str(QoS_GOLD_Drops))
         results += 'QoS_GOLD_Drops{host="%s"} %s\n' % (seed_hostname, str(QoS_GOLD_Drops))
 
         QoS_SILVER_Pkts = qos_output_raw.splitlines()[-8].split(" ")[-1].split("/")[0]
-        results += 'QoS_SILVER_IN_Pkts{host="%s"} %s\n' % (seed_hostname, str(QoS_SILVER_Pkts))
+        results += 'QoS_SILVER_OUT_Pkts{host="%s"} %s\n' % (seed_hostname, str(QoS_SILVER_Pkts))
         results += 'QoS_SILVER_Pkts{host="%s"} %s\n' % (seed_hostname, str(QoS_SILVER_Pkts))
         QoS_SILVER_Bytes = qos_output_raw.splitlines()[-8].split(" ")[-1].split("/")[1]
-        results += 'QoS_SILVER_IN_Bytes{host="%s"} %s\n' % (seed_hostname, str(QoS_SILVER_Bytes))
+        results += 'QoS_SILVER_OUT_Bytes{host="%s"} %s\n' % (seed_hostname, str(QoS_SILVER_Bytes))
         results += 'QoS_SILVER_Bytes{host="%s"} %s\n' % (seed_hostname, str(QoS_SILVER_Bytes))
-        QoS_SILVER_Drops = qos_output_raw.splitlines()[-9].split("/")[-2]
-        results += 'QoS_SILVER_IN_Drops{host="%s"} %s\n' % (seed_hostname, str(QoS_SILVER_Drops))
+        QoS_SILVER_Drops = qos_output_raw.splitlines()[-9].split("/")[2]
+        results += 'QoS_SILVER_OUT_Drops{host="%s"} %s\n' % (seed_hostname, str(QoS_SILVER_Drops))
         results += 'QoS_SILVER_Drops{host="%s"} %s\n' % (seed_hostname, str(QoS_SILVER_Drops))
 
         QoS_BRONZE_Pkts = qos_output_raw.splitlines()[-6].split(" ")[-1].split("/")[0]
-        results += 'QoS_BRONZE_IN_Pkts{host="%s"} %s\n' % (seed_hostname, str(QoS_BRONZE_Pkts))
+        results += 'QoS_BRONZE_OUT_Pkts{host="%s"} %s\n' % (seed_hostname, str(QoS_BRONZE_Pkts))
         results += 'QoS_BRONZE_Pkts{host="%s"} %s\n' % (seed_hostname, str(QoS_BRONZE_Pkts))
         QoS_BRONZE_Bytes = qos_output_raw.splitlines()[-6].split(" ")[-1].split("/")[1]
-        results += 'QoS_BRONZE_IN_Bytes{host="%s"} %s\n' % (seed_hostname, str(QoS_BRONZE_Bytes))
+        results += 'QoS_BRONZE_OUT_Bytes{host="%s"} %s\n' % (seed_hostname, str(QoS_BRONZE_Bytes))
         results += 'QoS_BRONZE_Bytes{host="%s"} %s\n' % (seed_hostname, str(QoS_BRONZE_Bytes))
-        QoS_BRONZE_Drops = qos_output_raw.splitlines()[-7].split("/")[-2]
-        results += 'QoS_BRONZE_IN_Drops{host="%s"} %s\n' % (seed_hostname, str(QoS_BRONZE_Drops))
+        QoS_BRONZE_Drops = qos_output_raw.splitlines()[-7].split("/")[2]
+        results += 'QoS_BRONZE_OUT_Drops{host="%s"} %s\n' % (seed_hostname, str(QoS_BRONZE_Drops))
         results += 'QoS_BRONZE_Drops{host="%s"} %s\n' % (seed_hostname, str(QoS_BRONZE_Drops))
 
         QoS_TIN_Pkts = qos_output_raw.splitlines()[-4].split(" ")[-1].split("/")[0]
-        results += 'QoS_TIN_IN_Pkts{host="%s"} %s\n' % (seed_hostname, str(QoS_TIN_Pkts))
+        results += 'QoS_TIN_OUT_Pkts{host="%s"} %s\n' % (seed_hostname, str(QoS_TIN_Pkts))
         results += 'QoS_TIN_Pkts{host="%s"} %s\n' % (seed_hostname, str(QoS_TIN_Pkts))
         QoS_TIN_Bytes = qos_output_raw.splitlines()[-4].split(" ")[-1].split("/")[1]
-        results += 'QoS_TIN_IN_Bytes{host="%s"} %s\n' % (seed_hostname, str(QoS_TIN_Bytes))
+        results += 'QoS_TIN_OUT_Bytes{host="%s"} %s\n' % (seed_hostname, str(QoS_TIN_Bytes))
         results += 'QoS_TIN_Bytes{host="%s"} %s\n' % (seed_hostname, str(QoS_TIN_Bytes))
-        QoS_TIN_Drops = qos_output_raw.splitlines()[-5].split("/")[-2]
-        results += 'QoS_TIN_IN_Drops{host="%s"} %s\n' % (seed_hostname, str(QoS_TIN_Drops))
+        QoS_TIN_Drops = qos_output_raw.splitlines()[-5].split("/")[2]
+        results += 'QoS_TIN_OUT_Drops{host="%s"} %s\n' % (seed_hostname, str(QoS_TIN_Drops))
         results += 'QoS_TIN_Drops{host="%s"} %s\n' % (seed_hostname, str(QoS_TIN_Drops))
 
         QoS_DEFAULT_Pkts = qos_output_raw.splitlines()[-2].split(" ")[-1].split("/")[0]
-        results += 'QoS_DEFAULT_IN_Pkts{host="%s"} %s\n' % (seed_hostname, str(QoS_DEFAULT_Pkts))
+        results += 'QoS_DEFAULT_OUT_Pkts{host="%s"} %s\n' % (seed_hostname, str(QoS_DEFAULT_Pkts))
         results += 'QoS_DEFAULT_Pkts{host="%s"} %s\n' % (seed_hostname, str(QoS_DEFAULT_Pkts))
         QoS_DEFAULT_Bytes = qos_output_raw.splitlines()[-2].split(" ")[-1].split("/")[1]
-        results += 'QoS_DEFAULT_IN_Bytes{host="%s"} %s\n' % (seed_hostname, str(QoS_DEFAULT_Bytes))
+        results += 'QoS_DEFAULT_OUT_Bytes{host="%s"} %s\n' % (seed_hostname, str(QoS_DEFAULT_Bytes))
         results += 'QoS_DEFAULT_Bytes{host="%s"} %s\n' % (seed_hostname, str(QoS_DEFAULT_Bytes))
-        QoS_DEFAULT_Drops = qos_output_raw.splitlines()[-3].split("/")[-2]
-        results += 'QoS_DEFAULT_IN_Drops{host="%s"} %s\n' % (seed_hostname, str(QoS_DEFAULT_Drops))
+        QoS_DEFAULT_Drops = qos_output_raw.splitlines()[-3].split("/")[2]
+        results += 'QoS_DEFAULT_OUT_Drops{host="%s"} %s\n' % (seed_hostname, str(QoS_DEFAULT_Drops))
         results += 'QoS_DEFAULT_Drops{host="%s"} %s\n' % (seed_hostname, str(QoS_DEFAULT_Drops))
 
         qos_output_raw = run_command(crawler_connected, "sho policy-map interface input | i pkts|no-buffer", 1)
         QoS_PLAT_Pkts = qos_output_raw.splitlines()[-12].split(" ")[-1].split("/")[0]
-        results += 'QoS_PLAT_Pkts{host="%s"} %s\n' % (seed_hostname, str(QoS_PLAT_Pkts))
+        results += 'QoS_PLAT_IN_Pkts{host="%s"} %s\n' % (seed_hostname, str(QoS_PLAT_Pkts))
         QoS_PLAT_Bytes = qos_output_raw.splitlines()[-12].split(" ")[-1].split("/")[1]
-        results += 'QoS_PLAT_Bytes{host="%s"} %s\n' % (seed_hostname, str(QoS_PLAT_Bytes))
-        QoS_PLAT_Drops = qos_output_raw.splitlines()[-13].split("/")[-2]
-        results += 'QoS_PLAT_Drops{host="%s"} %s\n' % (seed_hostname, str(QoS_PLAT_Drops))
+        results += 'QoS_PLAT_IN_Bytes{host="%s"} %s\n' % (seed_hostname, str(QoS_PLAT_Bytes))
+        QoS_PLAT_Drops = qos_output_raw.splitlines()[-13].split("/")[2]
+        results += 'QoS_PLAT_IN_Drops{host="%s"} %s\n' % (seed_hostname, str(QoS_PLAT_Drops))
 
         QoS_GOLD_Pkts = qos_output_raw.splitlines()[-10].split(" ")[-1].split("/")[0]
-        results += 'QoS_GOLD_Pkts{host="%s"} %s\n' % (seed_hostname, str(QoS_GOLD_Pkts))
+        results += 'QoS_GOLD_IN_Pkts{host="%s"} %s\n' % (seed_hostname, str(QoS_GOLD_Pkts))
         QoS_GOLD_Bytes = qos_output_raw.splitlines()[-10].split(" ")[-1].split("/")[1]
-        results += 'QoS_GOLD_Bytes{host="%s"} %s\n' % (seed_hostname, str(QoS_GOLD_Bytes))
-        QoS_GOLD_Drops = qos_output_raw.splitlines()[-11].split("/")[-2]
-        results += 'QoS_GOLD_Drops{host="%s"} %s\n' % (seed_hostname, str(QoS_GOLD_Drops))
+        results += 'QoS_GOLD_IN_Bytes{host="%s"} %s\n' % (seed_hostname, str(QoS_GOLD_Bytes))
+        QoS_GOLD_Drops = qos_output_raw.splitlines()[-11].split("/")[2]
+        results += 'QoS_GOLD_IN_Drops{host="%s"} %s\n' % (seed_hostname, str(QoS_GOLD_Drops))
 
         QoS_SILVER_Pkts = qos_output_raw.splitlines()[-8].split(" ")[-1].split("/")[0]
-        results += 'QoS_SILVER_Pkts{host="%s"} %s\n' % (seed_hostname, str(QoS_SILVER_Pkts))
+        results += 'QoS_SILVER_IN_Pkts{host="%s"} %s\n' % (seed_hostname, str(QoS_SILVER_Pkts))
         QoS_SILVER_Bytes = qos_output_raw.splitlines()[-8].split(" ")[-1].split("/")[1]
-        results += 'QoS_SILVER_Bytes{host="%s"} %s\n' % (seed_hostname, str(QoS_SILVER_Bytes))
-        QoS_SILVER_Drops = qos_output_raw.splitlines()[-9].split("/")[-2]
-        results += 'QoS_SILVER_Drops{host="%s"} %s\n' % (seed_hostname, str(QoS_SILVER_Drops))
+        results += 'QoS_SILVER_IN_Bytes{host="%s"} %s\n' % (seed_hostname, str(QoS_SILVER_Bytes))
+        QoS_SILVER_Drops = qos_output_raw.splitlines()[-9].split("/")[2]
+        results += 'QoS_SILVER_IN_Drops{host="%s"} %s\n' % (seed_hostname, str(QoS_SILVER_Drops))
 
         QoS_BRONZE_Pkts = qos_output_raw.splitlines()[-6].split(" ")[-1].split("/")[0]
-        results += 'QoS_BRONZE_Pkts{host="%s"} %s\n' % (seed_hostname, str(QoS_BRONZE_Pkts))
+        results += 'QoS_BRONZE_IN_Pkts{host="%s"} %s\n' % (seed_hostname, str(QoS_BRONZE_Pkts))
         QoS_BRONZE_Bytes = qos_output_raw.splitlines()[-6].split(" ")[-1].split("/")[1]
-        results += 'QoS_BRONZE_Bytes{host="%s"} %s\n' % (seed_hostname, str(QoS_BRONZE_Bytes))
-        QoS_BRONZE_Drops = qos_output_raw.splitlines()[-7].split("/")[-2]
-        results += 'QoS_BRONZE_Drops{host="%s"} %s\n' % (seed_hostname, str(QoS_BRONZE_Drops))
+        results += 'QoS_BRONZE_IN_Bytes{host="%s"} %s\n' % (seed_hostname, str(QoS_BRONZE_Bytes))
+        QoS_BRONZE_Drops = qos_output_raw.splitlines()[-7].split("/")[2]
+        results += 'QoS_BRONZE_IN_Drops{host="%s"} %s\n' % (seed_hostname, str(QoS_BRONZE_Drops))
 
         QoS_TIN_Pkts = qos_output_raw.splitlines()[-4].split(" ")[-1].split("/")[0]
-        results += 'QoS_TIN_Pkts{host="%s"} %s\n' % (seed_hostname, str(QoS_TIN_Pkts))
+        results += 'QoS_TIN_IN_Pkts{host="%s"} %s\n' % (seed_hostname, str(QoS_TIN_Pkts))
         QoS_TIN_Bytes = qos_output_raw.splitlines()[-4].split(" ")[-1].split("/")[1]
-        results += 'QoS_TIN_Bytes{host="%s"} %s\n' % (seed_hostname, str(QoS_TIN_Bytes))
-        QoS_TIN_Drops = qos_output_raw.splitlines()[-5].split("/")[-2]
-        results += 'QoS_TIN_Drops{host="%s"} %s\n' % (seed_hostname, str(QoS_TIN_Drops))
+        results += 'QoS_TIN_IN_Bytes{host="%s"} %s\n' % (seed_hostname, str(QoS_TIN_Bytes))
+        QoS_TIN_Drops = qos_output_raw.splitlines()[-5].split("/")[2]
+        results += 'QoS_TIN_IN_Drops{host="%s"} %s\n' % (seed_hostname, str(QoS_TIN_Drops))
 
         QoS_DEFAULT_Pkts = qos_output_raw.splitlines()[-2].split(" ")[-1].split("/")[0]
-        results += 'QoS_DEFAULT_Pkts{host="%s"} %s\n' % (seed_hostname, str(QoS_DEFAULT_Pkts))
+        results += 'QoS_DEFAULT_IN_Pkts{host="%s"} %s\n' % (seed_hostname, str(QoS_DEFAULT_Pkts))
         QoS_DEFAULT_Bytes = qos_output_raw.splitlines()[-2].split(" ")[-1].split("/")[1]
-        results += 'QoS_DEFAULT_Bytes{host="%s"} %s\n' % (seed_hostname, str(QoS_DEFAULT_Bytes))
-        QoS_DEFAULT_Drops = qos_output_raw.splitlines()[-3].split("/")[-2]
-        results += 'QoS_DEFAULT_Drops{host="%s"} %s\n' % (seed_hostname, str(QoS_DEFAULT_Drops))
+        results += 'QoS_DEFAULT_IN_Bytes{host="%s"} %s\n' % (seed_hostname, str(QoS_DEFAULT_Bytes))
+        QoS_DEFAULT_Drops = qos_output_raw.splitlines()[-3].split("/")[2]
+        results += 'QoS_DEFAULT_IN_Drops{host="%s"} %s\n' % (seed_hostname, str(QoS_DEFAULT_Drops))
 
         # qos_output_raw = run_command(crawler_connected, "sho policy-map interface | i Class|pkts|drops", 1)
         # QoS_PLAT_Pkts = qos_output_raw.splitlines()[-19].split(" ")[-1].split("/")[0]
