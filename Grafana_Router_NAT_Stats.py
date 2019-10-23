@@ -254,16 +254,16 @@ def login_to_host(seed_hostname, seed_username, seed_password, device_OS):
         #QoS_BRONZE_Drops = qos_output_raw.splitlines()[-7].split("/")[-3]
         #results += 'QoS_BRONZE_IN_Drops{host="%s"} %s\n' % (seed_hostname, str(QoS_BRONZE_Drops))
 
-        QoS_TIN_Pkts = qos_output_raw.splitlines()[-3].split(" ")[0]
+        QoS_TIN_Pkts = qos_output_raw.splitlines()[-3].split(" ")[-4]
         results += 'QoS_TIN_IN_Pkts{host="%s"} %s\n' % (seed_hostname, str(QoS_TIN_Pkts))
-        QoS_TIN_Bytes = qos_output_raw.splitlines()[-3].split(" ")[2]
+        QoS_TIN_Bytes = qos_output_raw.splitlines()[-3].split(" ")[-2]
         results += 'QoS_TIN_IN_Bytes{host="%s"} %s\n' % (seed_hostname, str(QoS_TIN_Bytes))
         #QoS_TIN_Drops = qos_output_raw.splitlines()[-5].split("/")[-3]
         #results += 'QoS_TIN_IN_Drops{host="%s"} %s\n' % (seed_hostname, str(QoS_TIN_Drops))
 
-        QoS_DEFAULT_Pkts = qos_output_raw.splitlines()[-2].split(" ")[0]
+        QoS_DEFAULT_Pkts = qos_output_raw.splitlines()[-2].split(" ")[-4]
         results += 'QoS_DEFAULT_IN_Pkts{host="%s"} %s\n' % (seed_hostname, str(QoS_DEFAULT_Pkts))
-        QoS_DEFAULT_Bytes = qos_output_raw.splitlines()[-2].split(" ")[2]
+        QoS_DEFAULT_Bytes = qos_output_raw.splitlines()[-2].split(" ")[-2]
         results += 'QoS_DEFAULT_IN_Bytes{host="%s"} %s\n' % (seed_hostname, str(QoS_DEFAULT_Bytes))
         #QoS_DEFAULT_Drops = qos_output_raw.splitlines()[-3].split("/")[-3]
         #results += 'QoS_DEFAULT_IN_Drops{host="%s"} %s\n' % (seed_hostname, str(QoS_DEFAULT_Drops))
