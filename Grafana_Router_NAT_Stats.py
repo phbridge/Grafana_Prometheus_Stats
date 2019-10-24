@@ -225,7 +225,13 @@ def login_to_host(seed_hostname, seed_username, seed_password, device_OS):
         results += 'QoS_DEFAULT_OUT_Drops{host="%s"} %s\n' % (seed_hostname, str(QoS_DEFAULT_Drops))
         results += 'QoS_DEFAULT_Drops{host="%s"} %s\n' % (seed_hostname, str(QoS_DEFAULT_Drops))
 
-        qos_output_raw = run_command(crawler_connected, "sho policy-map interface input | i packets", 1)
+        qos_output_raw_raw = run_command(crawler_connected, "sho policy-map interface input | i packets", 1)
+        #Neeed to have this goofing as IOS and IOS-XE output is different
+        qos_output_raw = []
+        for line in qos_output_raw_raw:
+            if not "        " in line:
+                qos_output_raw.append(line)
+
         QoS_PLAT_Pkts = qos_output_raw.splitlines()[-7].split(" ")[-4]
         results += 'QoS_PLAT_IN_Pkts{host="%s"} %s\n' % (seed_hostname, str(QoS_PLAT_Pkts))
         QoS_PLAT_Bytes = qos_output_raw.splitlines()[-7].split(" ")[-2]
