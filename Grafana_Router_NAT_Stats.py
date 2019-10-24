@@ -229,10 +229,9 @@ def login_to_host(seed_hostname, seed_username, seed_password, device_OS):
         #Neeed to have this goofing as IOS and IOS-XE output is different
 
         for line in qos_output_raw_raw:
-            line.split("")
-            qos_output_raw += line
-            results += line
-            results += repr(line)
+            qos_output_raw += line.split(" ")
+            results += line.split(" ")
+            results += repr(line.split(" "))
 
         QoS_PLAT_Pkts = qos_output_raw.splitlines()[-7].split(" ")[-4]
         results += 'QoS_PLAT_IN_Pkts{host="%s"} %s\n' % (seed_hostname, str(QoS_PLAT_Pkts))
