@@ -231,8 +231,9 @@ def login_to_host(seed_hostname, seed_username, seed_password, device_OS):
         for line in qos_output_raw_raw:
             if "'\r' ' ' ' ' ' ' ' ' ' ' ' ' ' ' ' " not in line:
                 qos_output_raw = line.split(" ")
+                results += line
                 results += str(qos_output_raw)
-                results += repr(qos_output_raw)
+                #results += repr(qos_output_raw)
 
         QoS_PLAT_Pkts = qos_output_raw.splitlines()[-7].split(" ")[-4]
         results += 'QoS_PLAT_IN_Pkts{host="%s"} %s\n' % (seed_hostname, str(QoS_PLAT_Pkts))
