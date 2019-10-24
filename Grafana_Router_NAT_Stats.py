@@ -229,7 +229,7 @@ def login_to_host(seed_hostname, seed_username, seed_password, device_OS):
         #Neeed to have this goofing as IOS and IOS-XE output is different
 
         for line in qos_output_raw_raw:
-            if "\r      " not in line:
+            if "'\r' ' ' ' ' ' ' ' ' ' ' ' ' ' ' ' '" not in line:
                 qos_output_raw += line
                 results += line
                 results += repr(line)
