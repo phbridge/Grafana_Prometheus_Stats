@@ -228,7 +228,7 @@ def login_to_host(seed_hostname, seed_username, seed_password, device_OS):
         qos_output_raw_raw = run_command(crawler_connected, "sho policy-map interface input | i packets", 1)
         #Neeed to have this goofing as IOS and IOS-XE output is different
 
-        for line in qos_output_raw_raw:
+        for line in qos_output_raw_raw.splitlines():
             if "        " not in str(line):
                 results += line
                 results += str(line)
