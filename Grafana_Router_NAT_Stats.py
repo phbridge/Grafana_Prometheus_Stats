@@ -79,8 +79,8 @@ def get_total_nat_translations(session, os_type, seed_hostname):
     elif os_type == "IOS":
         active_nat_stats_raw = run_command(session, "sho ip nat statistics | i Total active translations", 1)
     else:
-        #TODO return this as Error
-        #results = 'Active_NAT_Total{host="%s"} %s (%s) \n' % (seed_hostname, "0", "########## OS Not Supported for Active_NAT_Total ##########")
+        logger.warning(seed_hostname + " ########## OS Not Supported for Active_NAT_Total ##########")
+        results = 'Active_NAT_Total{host="%s"} %s\n' % (seed_hostname, str(-1))
         return results
     logger.debug(seed_hostname + "raw nat output " + active_nat_stats_raw)
     active_nat_stats = active_nat_stats_raw.splitlines()[-2].split(" ")[3]
@@ -97,8 +97,8 @@ def get_total_tcp_nat_translations(session, os_type, seed_hostname):
         active_nat_stats_raw = run_command(session, "sho ip nat translations tcp | count tcp", 1)
         active_nat_stats = active_nat_stats_raw.splitlines()[-2].split(" ")[7]
     else:
-        #TODO return this as Error
-        #results = 'Active_NAT_TCP{host="%s"} %s (%s) \n' % (seed_hostname, "0", "########## OS Not Supported for Active_NAT_TCP ##########")
+        logger.warning(seed_hostname + " ########## OS Not Supported for Active_NAT_TCP ##########")
+        results = 'Active_NAT_TCP{host="%s"} %s\n' % (seed_hostname, str(-1))
         return results
     logger.debug(seed_hostname + "raw nat output " + active_nat_stats_raw)
     logger.info(seed_hostname + " active_nat_tcp_stats " + active_nat_stats)
@@ -114,8 +114,8 @@ def get_total_udp_nat_translations(session, os_type, seed_hostname):
         active_nat_stats_raw = run_command(session, "sho ip nat translations udp | count udp", 1)
         active_nat_stats = active_nat_stats_raw.splitlines()[-2].split(" ")[7]
     else:
-        #TODO return this as Error
-        #results = 'Active_NAT_UDP{host="%s"} %s (%s) \n' % (seed_hostname, "0", "########## OS Not Supported for Active_NAT_UDP ##########")
+        logger.warning(seed_hostname + " ########## OS Not Supported for Active_NAT_UDP ##########")
+        results = 'Active_NAT_UDP{host="%s"} %s\n' % (seed_hostname, str(-1))
         return results
     logger.debug(seed_hostname + "raw nat output " + active_nat_stats_raw)
     logger.info(seed_hostname + " active_nat_tcp_stats " + active_nat_stats)
@@ -131,8 +131,8 @@ def get_total_icmp_nat_translations(session, os_type, seed_hostname):
         active_nat_stats_raw = run_command(session, "sho ip nat translations icmp | count icmp", 1)
         active_nat_stats = active_nat_stats_raw.splitlines()[-2].split(" ")[7]
     else:
-        #TODO return this as Error
-        #results = 'Active_NAT_ICMP{host="%s"} %s (%s) \n' % (seed_hostname, "0", "########## OS Not Supported for Active_NAT_ICMP ##########")
+        logger.warning(seed_hostname + " ########## OS Not Supported for Active_NAT_ICMP ##########")
+        results = 'Active_NAT_ICMP{host="%s"} %s\n' % (seed_hostname, str(-1))
         return results
     logger.debug(seed_hostname + "raw nat output " + active_nat_stats_raw)
     logger.info(seed_hostname + " active_nat_tcp_stats " + active_nat_stats)
@@ -186,7 +186,7 @@ def login_to_host(seed_hostname, seed_username, seed_password, device_OS):
         QoS_DEFAULT_Drops = int(qos_output_raw.splitlines()[-3].split("/")[-3])
 
 
-        
+
         results += 'QoS_PLAT_OUT_Pkts{host="%s"} %s\n' % (seed_hostname, str(QoS_PLAT_Pkts))
         results += 'QoS_PLAT_Pkts{host="%s"} %s\n' % (seed_hostname, str(QoS_PLAT_Pkts))
         results += 'QoS_PLAT_OUT_Bytes{host="%s"} %s\n' % (seed_hostname, str(QoS_PLAT_Bytes))
