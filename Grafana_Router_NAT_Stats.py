@@ -40,7 +40,7 @@
 # 4.0 DONE Display stats for that device on the page
 # 5.0 DONE Add argparse for debug and EULA
 # 6.0 DONE Implement multiprocessing
-# 7.0 Implement connection reuse - Ideally keep SSH connection open full time
+# 7.0 NOT FOR THIS PRIJECT Implement connection reuse - Ideally keep SSH connection open full time
 # 8.0 Something better than time.sleep() waiting for response.
 #
 
@@ -80,12 +80,12 @@ def get_total_nat_translations(session, os_type, seed_hostname):
         active_nat_stats_raw = run_command(session, "sho ip nat statistics | i Total active translations", 1)
     else:
         logger.warning(seed_hostname + " ########## OS Not Supported for Active_NAT_Total ##########")
-        results = 'Active_NAT_Total{host="%s"} %s\n' % (seed_hostname, str(-1))
+        results = 'NAT_Active_NAT_Total{host="%s"} %s\n' % (seed_hostname, str(-1))
         return results
     logger.debug(seed_hostname + "raw nat output " + active_nat_stats_raw)
     active_nat_stats = active_nat_stats_raw.splitlines()[-2].split(" ")[3]
     logger.info(seed_hostname + " active_nat_stats " + active_nat_stats)
-    results = 'Active_NAT_Total{host="%s"} %s\n' % (seed_hostname, str(active_nat_stats))
+    results = 'NAT_Active_NAT_Total{host="%s"} %s\n' % (seed_hostname, str(active_nat_stats))
     return results
 
 
@@ -98,11 +98,11 @@ def get_total_tcp_nat_translations(session, os_type, seed_hostname):
         active_nat_stats = active_nat_stats_raw.splitlines()[-2].split(" ")[7]
     else:
         logger.warning(seed_hostname + " ########## OS Not Supported for Active_NAT_TCP ##########")
-        results = 'Active_NAT_TCP{host="%s"} %s\n' % (seed_hostname, str(-1))
+        results = 'NAT_Active_NAT_TCP{host="%s"} %s\n' % (seed_hostname, str(-1))
         return results
     logger.debug(seed_hostname + "raw nat output " + active_nat_stats_raw)
     logger.info(seed_hostname + " active_nat_tcp_stats " + active_nat_stats)
-    results = 'Active_NAT_TCP{host="%s"} %s\n' % (seed_hostname, str(active_nat_stats))
+    results = 'NAT_Active_NAT_TCP{host="%s"} %s\n' % (seed_hostname, str(active_nat_stats))
     return results
 
 
@@ -115,11 +115,11 @@ def get_total_udp_nat_translations(session, os_type, seed_hostname):
         active_nat_stats = active_nat_stats_raw.splitlines()[-2].split(" ")[7]
     else:
         logger.warning(seed_hostname + " ########## OS Not Supported for Active_NAT_UDP ##########")
-        results = 'Active_NAT_UDP{host="%s"} %s\n' % (seed_hostname, str(-1))
+        results = 'NAT_Active_NAT_UDP{host="%s"} %s\n' % (seed_hostname, str(-1))
         return results
     logger.debug(seed_hostname + "raw nat output " + active_nat_stats_raw)
     logger.info(seed_hostname + " active_nat_tcp_stats " + active_nat_stats)
-    results = 'Active_NAT_UDP{host="%s"} %s\n' % (seed_hostname, str(active_nat_stats))
+    results = 'NAT_Active_NAT_UDP{host="%s"} %s\n' % (seed_hostname, str(active_nat_stats))
     return results
 
 
@@ -132,11 +132,11 @@ def get_total_icmp_nat_translations(session, os_type, seed_hostname):
         active_nat_stats = active_nat_stats_raw.splitlines()[-2].split(" ")[7]
     else:
         logger.warning(seed_hostname + " ########## OS Not Supported for Active_NAT_ICMP ##########")
-        results = 'Active_NAT_ICMP{host="%s"} %s\n' % (seed_hostname, str(-1))
+        results = 'NAT_Active_NAT_ICMP{host="%s"} %s\n' % (seed_hostname, str(-1))
         return results
     logger.debug(seed_hostname + "raw nat output " + active_nat_stats_raw)
     logger.info(seed_hostname + " active_nat_tcp_stats " + active_nat_stats)
-    results = 'Active_NAT_ICMP{host="%s"} %s\n' % (seed_hostname, str(active_nat_stats))
+    results = 'NAT_Active_NAT_ICMP{host="%s"} %s\n' % (seed_hostname, str(active_nat_stats))
     return results
 
 
