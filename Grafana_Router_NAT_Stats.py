@@ -55,10 +55,10 @@ import paramiko                     # used for the SSH session
 import socket                       # only used to raise socket exceptions
 from multiprocessing import Pool    # trying to run in parallel rather than in sequence
 
-server_IP = "127.0.0.1"
+server_IP = "::"
 server_port = 8085
 # Note absolute logfile path must exist when its run as a service else service will not start properly.
-logfile = "/home/phbridge/Grafana_Prometheus_Stats/grafana_router_nat_stats_%s_%s.log" % (server_IP, server_port)
+logfile = "/home/phbridge/Grafana_Prometheus_Stats/grafana_router_nat_stats_%s.log" % server_port
 # Note absolute logfile path must exist when its run as a service else service will not start properly.
 logCount = 4
 logBytes = 1048576
