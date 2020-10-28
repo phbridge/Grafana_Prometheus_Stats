@@ -140,32 +140,53 @@ def get_total_icmp_nat_translations(session, os_type, seed_hostname):
     return results
 
 
-def login_to_host(seed_hostname, seed_username, seed_password, device_OS):
+def login_to_host_nat(seed_hostname, seed_username, seed_password, device_OS):
     crawler_connection_pre = paramiko.SSHClient()
     crawler_connection_pre.set_missing_host_key_policy(paramiko.AutoAddPolicy())
     results = ""
     try:
         logger.debug(seed_hostname + " Starting connection")
-        crawler_connection_pre.connect(hostname=seed_hostname,
-                                       port=22,
-                                       username=seed_username,
-                                       password=seed_password,
-                                       look_for_keys=False,
-                                       allow_agent=False,
-                                       timeout=10)
+        crawler_connection_pre.connect(hostname=seed_hostname, port=22, username=seed_username, password=seed_password,
+                                       look_for_keys=False, allow_agent=False, timeout=10)
         logger.debug(seed_hostname + " Invoking Shell")
         crawler_connected = crawler_connection_pre.get_transport().open_session()
         crawler_connected.invoke_shell()
-
         run_command(crawler_connected, "terminal length 0", 1)
-
         results += get_total_nat_translations(crawler_connected, device_OS, seed_hostname)
         results += get_total_tcp_nat_translations(crawler_connected, device_OS, seed_hostname)
         results += get_total_udp_nat_translations(crawler_connected, device_OS, seed_hostname)
         results += get_total_icmp_nat_translations(crawler_connected, device_OS, seed_hostname)
+        crawler_connected.close()
+        crawler_connection_pre.close()
+        return results
 
+    except paramiko.AuthenticationException:
+        logger.warning(seed_hostname + " ########## Auth Error ##########")
+        return results
+    except paramiko.SSHException:
+        logger.warning(seed_hostname + " ########## SSH Error ##########")
+        return results
+    except socket.error:
+        logger.warning(seed_hostname + " ########## Socket Error ##########")
+        return results
+    except Exception as e:
+        logger.warning(seed_hostname + " ########## Unknown Error " + str(e) + "##########")
+        return results
+
+
+def login_to_host_qos(seed_hostname, seed_username, seed_password, device_OS):
+    crawler_connection_pre = paramiko.SSHClient()
+    crawler_connection_pre.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+    results = ""
+    try:
+        logger.debug(seed_hostname + " Starting connection")
+        crawler_connection_pre.connect(hostname=seed_hostname, port=22, username=seed_username, password=seed_password,
+                                       look_for_keys=False, allow_agent=False, timeout=10)
+        logger.debug(seed_hostname + " Invoking Shell")
+        crawler_connected = crawler_connection_pre.get_transport().open_session()
+        crawler_connected.invoke_shell()
+        run_command(crawler_connected, "terminal length 0", 1)
         qos_output_raw = run_command(crawler_connected, "sho policy-map interface output | i pkts|no-buffer", 1)
-
         QoS_PLAT_Pkts = int(qos_output_raw.splitlines()[-12].split(" ")[-1].split("/")[0])
         QoS_PLAT_Bytes = int(qos_output_raw.splitlines()[-12].split(" ")[-1].split("/")[1])
         QoS_PLAT_Drops = int(qos_output_raw.splitlines()[-13].split("/")[-2])
@@ -184,9 +205,6 @@ def login_to_host(seed_hostname, seed_username, seed_password, device_OS):
         QoS_DEFAULT_Pkts = int(qos_output_raw.splitlines()[-2].split(" ")[-1].split("/")[0])
         QoS_DEFAULT_Bytes = int(qos_output_raw.splitlines()[-2].split(" ")[-1].split("/")[1])
         QoS_DEFAULT_Drops = int(qos_output_raw.splitlines()[-3].split("/")[-3])
-
-
-
         results += 'QoS_PLAT_OUT_Pkts{host="%s"} %s\n' % (seed_hostname, str(QoS_PLAT_Pkts))
         results += 'QoS_PLAT_Pkts{host="%s"} %s\n' % (seed_hostname, str(QoS_PLAT_Pkts))
         results += 'QoS_PLAT_OUT_Bytes{host="%s"} %s\n' % (seed_hostname, str(QoS_PLAT_Bytes))
@@ -223,15 +241,10 @@ def login_to_host(seed_hostname, seed_username, seed_password, device_OS):
         results += 'QoS_DEFAULT_Bytes{host="%s"} %s\n' % (seed_hostname, str(QoS_DEFAULT_Bytes))
         results += 'QoS_DEFAULT_OUT_Drops{host="%s"} %s\n' % (seed_hostname, str(QoS_DEFAULT_Drops))
         results += 'QoS_DEFAULT_Drops{host="%s"} %s\n' % (seed_hostname, str(QoS_DEFAULT_Drops))
-
         qos_output_raw_raw = run_command(crawler_connected, "sho policy-map interface input | i packets", 1)
-
-        #Neeed to have this goofing as IOS and IOS-XE output is different
-
         for line in qos_output_raw_raw.splitlines():
             if "        " not in str(line):
                 qos_output_raw += str(line + "\n")
-
         QoS_PLAT_Pkts = int(qos_output_raw.splitlines()[-7].split(" ")[-4])
         QoS_PLAT_Bytes = int(qos_output_raw.splitlines()[-7].split(" ")[-2])
         QoS_GOLD_Pkts = int(qos_output_raw.splitlines()[-6].split(" ")[-4])
@@ -244,8 +257,6 @@ def login_to_host(seed_hostname, seed_username, seed_password, device_OS):
         QoS_TIN_Bytes = int(qos_output_raw.splitlines()[-3].split(" ")[-2])
         QoS_DEFAULT_Pkts = int(qos_output_raw.splitlines()[-2].split(" ")[-4])
         QoS_DEFAULT_Bytes = int(qos_output_raw.splitlines()[-2].split(" ")[-2])
-
-
         results += 'QoS_PLAT_IN_Pkts{host="%s"} %s\n' % (seed_hostname, str(QoS_PLAT_Pkts))
         results += 'QoS_PLAT_IN_Bytes{host="%s"} %s\n' % (seed_hostname, str(QoS_PLAT_Bytes))
         results += 'QoS_GOLD_IN_Pkts{host="%s"} %s\n' % (seed_hostname, str(QoS_GOLD_Pkts))
@@ -258,11 +269,9 @@ def login_to_host(seed_hostname, seed_username, seed_password, device_OS):
         results += 'QoS_TIN_IN_Bytes{host="%s"} %s\n' % (seed_hostname, str(QoS_TIN_Bytes))
         results += 'QoS_DEFAULT_IN_Pkts{host="%s"} %s\n' % (seed_hostname, str(QoS_DEFAULT_Pkts))
         results += 'QoS_DEFAULT_IN_Bytes{host="%s"} %s\n' % (seed_hostname, str(QoS_DEFAULT_Bytes))
-
         crawler_connected.close()
         crawler_connection_pre.close()
         return results
-
     except paramiko.AuthenticationException:
         logger.warning(seed_hostname + " ########## Auth Error ##########")
         return results
@@ -277,17 +286,7 @@ def login_to_host(seed_hostname, seed_username, seed_password, device_OS):
         return results
 
 
-def processing_test(hostname, username, password):
-    longstring = str(hostname + username + password + "\n")
-    print("process")
-    print("begin wait")
-    time.sleep(10)
-    print("end wait")
-    print(str(hostname + username + password + "\n"))
-    return longstring
-
-
-def process_hosts_in_parallel():
+def process_hosts_in_parallel_nat():
     logger.info("----------- Processing Parallel -----------")
     results = ""
     hosts = []
@@ -299,19 +298,23 @@ def process_hosts_in_parallel():
         host_details.append(each['OS'])
         hosts.append(host_details)
     with Pool(processes=args.max_threads) as process_worker:
-        results = process_worker.starmap(login_to_host, hosts)
+        results = process_worker.starmap(login_to_host_nat, hosts)
     return results
 
 
-def process_hosts_in_serial():
-    logger.info("----------- Processing Serial -----------")
+def process_hosts_in_parallel_qos():
+    logger.info("----------- Processing Parallel -----------")
     results = ""
-    for host in NAT_Stats_Credentials.hosts:
-        logger.info("----------- Processing Host: %s -----------" % host['host'])
-        # login to box
-        results += login_to_host(host['host'], host['username'], host['password'], host['OS'])
-        logger.info("----------- Finished -----------")
-        # return text to service
+    hosts = []
+    for each in NAT_Stats_Credentials.hosts:
+        host_details = []
+        host_details.append(each['host'])
+        host_details.append(each['username'])
+        host_details.append(each['password'])
+        host_details.append(each['OS'])
+        hosts.append(host_details)
+    with Pool(processes=args.max_threads) as process_worker:
+        results = process_worker.starmap(login_to_host_qos, hosts)
     return results
 
 
@@ -346,10 +349,14 @@ def parse_all_arguments():
 @web_app.route('/nat_stats')
 # gets called via the http://127.0.0.1:8082/nat_stats
 def get_stats():
-    if args.single_thread:
-        results = process_hosts_in_serial()
-    else:
-        results = process_hosts_in_parallel()
+    results = process_hosts_in_parallel_nat()
+    return Response(results, mimetype='text/plain')
+
+
+@web_app.route('/QoS_stats')
+# gets called via the http://127.0.0.1:8082/qos_stats
+def get_stats():
+    results = process_hosts_in_parallel_qos()
     return Response(results, mimetype='text/plain')
 
 
