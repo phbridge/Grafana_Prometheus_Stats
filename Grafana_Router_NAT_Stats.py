@@ -353,7 +353,7 @@ def get_stats_nat():
     return Response(results, mimetype='text/plain')
 
 
-@web_app.route('/QoS_stats')
+@web_app.route('/qos_stats')
 # gets called via the http://127.0.0.1:8082/qos_stats
 def get_stats_qos():
     results = process_hosts_in_parallel_qos()
