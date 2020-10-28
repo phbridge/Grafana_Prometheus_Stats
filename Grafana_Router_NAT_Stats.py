@@ -348,14 +348,14 @@ def parse_all_arguments():
 
 @web_app.route('/nat_stats')
 # gets called via the http://127.0.0.1:8082/nat_stats
-def get_stats():
+def get_stats_nat():
     results = process_hosts_in_parallel_nat()
     return Response(results, mimetype='text/plain')
 
 
 @web_app.route('/QoS_stats')
 # gets called via the http://127.0.0.1:8082/qos_stats
-def get_stats():
+def get_stats_qos():
     results = process_hosts_in_parallel_qos()
     return Response(results, mimetype='text/plain')
 
