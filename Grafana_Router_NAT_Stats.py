@@ -454,7 +454,11 @@ def login_to_host_combined(seed_hostname, seed_username, seed_password, device_O
         function_logger.warning("Socket Error HOST=%s" % seed_hostname)
         return results
     except Exception as e:
-        function_logger.warning("Unknown Error %s HOST=%s ##########" % (str(e), seed_hostname))
+        function_logger.error("something went bad collecting from host")
+        function_logger.error("Unknown Error %s HOST=%s ##########" % (str(e), seed_hostname))
+        function_logger.error("Unexpected error:%s" % str(sys.exc_info()[0]))
+        function_logger.error("Unexpected error:%s" % str(e))
+        function_logger.error("TRACEBACK=%s" % str(traceback.format_exc()))
         return results
 
 
