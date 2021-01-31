@@ -580,8 +580,10 @@ def router_stats_combined():
         timestamp_string = str(int(now.timestamp()) * 1000000000)
         future = now + timedelta(seconds=30)
         influx_upload = process_hosts_in_parallel_combined(influx=True)
+        function_logger.info("influx_upload")
+        function_logger.info(influx_upload)
         to_send = ""
-        for each in influx_upload.splitlines():
+        for each in influx_upload:
             to_send += each + " " + timestamp_string + "\n"
         if not historical_upload == "":
             function_logger.debug("adding history to upload")
