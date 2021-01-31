@@ -89,65 +89,130 @@ def run_command(session, command, wait):
 
 def get_total_nat_translations(session, os_type, seed_hostname):
     function_logger = logger.getChild("%s.%s.%s" % (inspect.stack()[2][3], inspect.stack()[1][3], inspect.stack()[0][3]))
-    if os_type == "IOS-XE":
-        active_nat_stats_raw = run_command(session, "sho ip nat statistics | i Total active translations", 3)
-    elif os_type == "IOS":
-        active_nat_stats_raw = run_command(session, "sho ip nat statistics | i Total active translations", 3)
-    else:
-        function_logger.warning(seed_hostname + " ########## OS Not Supported for Active_NAT_Total ##########")
+    try:
+        if os_type == "IOS-XE":
+            active_nat_stats_raw = run_command(session, "sho ip nat statistics | i Total active translations", 3)
+        elif os_type == "IOS":
+            active_nat_stats_raw = run_command(session, "sho ip nat statistics | i Total active translations", 3)
+        else:
+            function_logger.warning(seed_hostname + " ########## OS Not Supported for Active_NAT_Total ##########")
+            return "-1"
+        function_logger.debug(seed_hostname + "raw nat output " + active_nat_stats_raw)
+        active_nat_stats = active_nat_stats_raw.splitlines()[-2].split(" ")[3]
+        function_logger.debug(seed_hostname + " active_nat_stats " + active_nat_stats)
+        return str(active_nat_stats)
+    except IndexError:
+        function_logger.warning("Index Error HOST=%s ##########" % seed_hostname)
+        function_logger.warning("raw_output was %s" % str(active_nat_stats_raw))
         return "-1"
-    function_logger.debug(seed_hostname + "raw nat output " + active_nat_stats_raw)
-    active_nat_stats = active_nat_stats_raw.splitlines()[-2].split(" ")[3]
-    function_logger.debug(seed_hostname + " active_nat_stats " + active_nat_stats)
-    return str(active_nat_stats)
+    except ValueError:
+        function_logger.warning("Value Error HOST=%s ##########" % seed_hostname)
+        function_logger.warning("raw_output was %s" % str(active_nat_stats_raw))
+        return "-1"
+    except Exception as e:
+        function_logger.error("something went collecting data from host")
+        function_logger.error("Unknown Error %s HOST=%s ##########" % (str(e), seed_hostname))
+        function_logger.error("Unexpected error:%s" % str(sys.exc_info()[0]))
+        function_logger.error("Unexpected error:%s" % str(e))
+        function_logger.error("TRACEBACK=%s" % str(traceback.format_exc()))
+        return "-1"
+
 
 
 def get_total_tcp_nat_translations(session, os_type, seed_hostname):
     function_logger = logger.getChild("%s.%s.%s" % (inspect.stack()[2][3], inspect.stack()[1][3], inspect.stack()[0][3]))
-    if os_type == "IOS-XE":
-        active_nat_stats_raw = run_command(session, "sho ip nat translations tcp total", 3)
-        active_nat_stats = active_nat_stats_raw.splitlines()[-3].split(" ")[4]
-    elif os_type == "IOS":
-        active_nat_stats_raw = run_command(session, "sho ip nat translations tcp | count tcp", 3)
-        active_nat_stats = active_nat_stats_raw.splitlines()[-2].split(" ")[7]
-    else:
-        function_logger.warning(seed_hostname + " ########## OS Not Supported for Active_NAT_TCP ##########")
+    try:
+        if os_type == "IOS-XE":
+            active_nat_stats_raw = run_command(session, "sho ip nat translations tcp total", 3)
+            active_nat_stats = active_nat_stats_raw.splitlines()[-3].split(" ")[4]
+        elif os_type == "IOS":
+            active_nat_stats_raw = run_command(session, "sho ip nat translations tcp | count tcp", 3)
+            active_nat_stats = active_nat_stats_raw.splitlines()[-2].split(" ")[7]
+        else:
+            function_logger.warning(seed_hostname + " ########## OS Not Supported for Active_NAT_TCP ##########")
+            return "-1"
+        function_logger.debug(seed_hostname + "raw nat output " + active_nat_stats_raw)
+        function_logger.debug(seed_hostname + " active_nat_tcp_stats " + active_nat_stats)
+        return str(active_nat_stats)
+    except IndexError:
+        function_logger.warning("Index Error HOST=%s ##########" % seed_hostname)
+        function_logger.warning("raw_output was %s" % str(active_nat_stats_raw))
         return "-1"
-    function_logger.debug(seed_hostname + "raw nat output " + active_nat_stats_raw)
-    function_logger.debug(seed_hostname + " active_nat_tcp_stats " + active_nat_stats)
-    return str(active_nat_stats)
+    except ValueError:
+        function_logger.warning("Value Error HOST=%s ##########" % seed_hostname)
+        function_logger.warning("raw_output was %s" % str(active_nat_stats_raw))
+        return "-1"
+    except Exception as e:
+        function_logger.error("something went collecting data from host")
+        function_logger.error("Unknown Error %s HOST=%s ##########" % (str(e), seed_hostname))
+        function_logger.error("Unexpected error:%s" % str(sys.exc_info()[0]))
+        function_logger.error("Unexpected error:%s" % str(e))
+        function_logger.error("TRACEBACK=%s" % str(traceback.format_exc()))
+        return "-1"
 
 
 def get_total_udp_nat_translations(session, os_type, seed_hostname):
     function_logger = logger.getChild("%s.%s.%s" % (inspect.stack()[2][3], inspect.stack()[1][3], inspect.stack()[0][3]))
-    if os_type == "IOS-XE":
-        active_nat_stats_raw = run_command(session, "sho ip nat translations udp total", 3)
-        active_nat_stats = active_nat_stats_raw.splitlines()[-3].split(" ")[4]
-    elif os_type == "IOS":
-        active_nat_stats_raw = run_command(session, "sho ip nat translations udp | count udp", 3)
-        active_nat_stats = active_nat_stats_raw.splitlines()[-2].split(" ")[7]
-    else:
-        function_logger.warning(seed_hostname + " ########## OS Not Supported for Active_NAT_UDP ##########")
+    try:
+        if os_type == "IOS-XE":
+            active_nat_stats_raw = run_command(session, "sho ip nat translations udp total", 3)
+            active_nat_stats = active_nat_stats_raw.splitlines()[-3].split(" ")[4]
+        elif os_type == "IOS":
+            active_nat_stats_raw = run_command(session, "sho ip nat translations udp | count udp", 3)
+            active_nat_stats = active_nat_stats_raw.splitlines()[-2].split(" ")[7]
+        else:
+            function_logger.warning(seed_hostname + " ########## OS Not Supported for Active_NAT_UDP ##########")
+            return "-1"
+        function_logger.debug(seed_hostname + "raw nat output " + active_nat_stats_raw)
+        function_logger.debug(seed_hostname + " active_nat_tcp_stats " + active_nat_stats)
+        return str(active_nat_stats)
+    except IndexError:
+        function_logger.warning("Index Error HOST=%s ##########" % seed_hostname)
+        function_logger.warning("raw_output was %s" % str(active_nat_stats_raw))
         return "-1"
-    function_logger.debug(seed_hostname + "raw nat output " + active_nat_stats_raw)
-    function_logger.debug(seed_hostname + " active_nat_tcp_stats " + active_nat_stats)
-    return str(active_nat_stats)
+    except ValueError:
+        function_logger.warning("Value Error HOST=%s ##########" % seed_hostname)
+        function_logger.warning("raw_output was %s" % str(active_nat_stats_raw))
+        return "-1"
+    except Exception as e:
+        function_logger.error("something went collecting data from host")
+        function_logger.error("Unknown Error %s HOST=%s ##########" % (str(e), seed_hostname))
+        function_logger.error("Unexpected error:%s" % str(sys.exc_info()[0]))
+        function_logger.error("Unexpected error:%s" % str(e))
+        function_logger.error("TRACEBACK=%s" % str(traceback.format_exc()))
+        return "-1"
 
 
 def get_total_icmp_nat_translations(session, os_type, seed_hostname):
     function_logger = logger.getChild("%s.%s.%s" % (inspect.stack()[2][3], inspect.stack()[1][3], inspect.stack()[0][3]))
-    if os_type == "IOS-XE":
-        active_nat_stats_raw = run_command(session, "sho ip nat translations icmp total", 3)
-        active_nat_stats = active_nat_stats_raw.splitlines()[-3].split(" ")[4]
-    elif os_type == "IOS":
-        active_nat_stats_raw = run_command(session, "sho ip nat translations icmp | count icmp", 3)
-        active_nat_stats = active_nat_stats_raw.splitlines()[-2].split(" ")[7]
-    else:
-        function_logger.warning(seed_hostname + " ########## OS Not Supported for Active_NAT_ICMP ##########")
+    try:
+        if os_type == "IOS-XE":
+            active_nat_stats_raw = run_command(session, "sho ip nat translations icmp total", 3)
+            active_nat_stats = active_nat_stats_raw.splitlines()[-3].split(" ")[4]
+        elif os_type == "IOS":
+            active_nat_stats_raw = run_command(session, "sho ip nat translations icmp | count icmp", 3)
+            active_nat_stats = active_nat_stats_raw.splitlines()[-2].split(" ")[7]
+        else:
+            function_logger.warning(seed_hostname + " ########## OS Not Supported for Active_NAT_ICMP ##########")
+            return "-1"
+        function_logger.debug(seed_hostname + "raw nat output " + active_nat_stats_raw)
+        function_logger.debug(seed_hostname + " active_nat_tcp_stats " + active_nat_stats)
+        return str(active_nat_stats)
+    except IndexError:
+        function_logger.warning("Index Error HOST=%s ##########" % seed_hostname)
+        function_logger.warning("raw_output was %s" % str(active_nat_stats_raw))
         return "-1"
-    function_logger.debug(seed_hostname + "raw nat output " + active_nat_stats_raw)
-    function_logger.debug(seed_hostname + " active_nat_tcp_stats " + active_nat_stats)
-    return str(active_nat_stats)
+    except ValueError:
+        function_logger.warning("Value Error HOST=%s ##########" % seed_hostname)
+        function_logger.warning("raw_output was %s" % str(active_nat_stats_raw))
+        return "-1"
+    except Exception as e:
+        function_logger.error("something went collecting data from host")
+        function_logger.error("Unknown Error %s HOST=%s ##########" % (str(e), seed_hostname))
+        function_logger.error("Unexpected error:%s" % str(sys.exc_info()[0]))
+        function_logger.error("Unexpected error:%s" % str(e))
+        function_logger.error("TRACEBACK=%s" % str(traceback.format_exc()))
+        return "-1"
 
 
 def login_to_host_nat(seed_hostname, seed_username, seed_password, device_OS, influx=False):
@@ -444,6 +509,14 @@ def login_to_host_combined(seed_hostname, seed_username, seed_password, device_O
         crawler_connected.close()
         crawler_connection_pre.close()
         return results
+    except IndexError:
+        function_logger.warning("Index Error HOST=%s ##########" % seed_hostname)
+        function_logger.warning("raw_output was %s" % str(qos_output_raw))
+        return "-1"
+    except ValueError:
+        function_logger.warning("Value Error HOST=%s ##########" % seed_hostname)
+        function_logger.warning("raw_output was %s" % str(qos_output_raw))
+        return "-1"
     except paramiko.AuthenticationException:
         function_logger.warning("Auth Error HOST=%s" % seed_hostname)
         return results
