@@ -60,6 +60,9 @@ from datetime import timedelta      # calculate x time ago
 from datetime import datetime       # timestamps mostly
 import inspect                      # logging
 import signal
+import requests
+import sys
+import traceback
 
 FLASK_HOST = credentials.FLASK_HOST
 FLASK_PORT = credentials.FLASK_PORT
@@ -69,6 +72,7 @@ INFLUX_MODE = credentials.INFLUX_MODE
 FLASK_MODE = credentials.FLASK_MODE
 MAX_THREADS = credentials.MAX_THREADS
 HOSTS = credentials.HOSTS
+INFLUX_DB_PATH = credentials.INFLUX_DB_PATH
 
 THREAD_TO_BREAK = threading.Event()
 
@@ -580,11 +584,12 @@ def router_stats_combined():
         timestamp_string = str(int(now.timestamp()) * 1000000000)
         future = now + timedelta(seconds=30)
         influx_upload = process_hosts_in_parallel_combined(influx=True)
-        function_logger.info("influx_upload")
-        function_logger.info(influx_upload)
         to_send = ""
-        for each in influx_upload:
-            to_send += each + " " + timestamp_string + "\n"
+        for host_response in influx_upload:
+            for each in host_response.splitlines():
+                to_send += each + " " + timestamp_string + "\n"
+        function_logger.info("to_send")
+        function_logger.info(to_send)
         if not historical_upload == "":
             function_logger.debug("adding history to upload")
             to_send += historical_upload
@@ -611,7 +616,7 @@ def update_influx(raw_string, timestamp=None):
             string_to_upload = raw_string
         success_array = []
         upload_to_influx_sessions = requests.session()
-        for influx_url in INFLUX_DB_Path:
+        for influx_url in INFLUX_DB_PATH:
             success = False
             attempts = 0
             attempt_error_array = []
