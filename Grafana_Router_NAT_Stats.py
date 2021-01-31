@@ -579,8 +579,7 @@ def router_stats_combined():
         now = datetime.now()
         timestamp_string = str(int(now.timestamp()) * 1000000000)
         future = now + timedelta(seconds=30)
-        influx_upload = ""
-        influx_upload += process_hosts_in_parallel_combined(influx=True)
+        influx_upload = process_hosts_in_parallel_combined(influx=True)
         to_send = ""
         for each in influx_upload.splitlines():
             to_send += each + " " + timestamp_string + "\n"
