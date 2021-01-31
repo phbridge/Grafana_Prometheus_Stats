@@ -8,6 +8,7 @@
 # This script will pull the NAT stats from a router (not avalable via SNMP) and display them on a page so that
 # Prometheus can then pull the page and get the latest stats. The same script can also be easily modified to pull
 # other stats from a router via CLI
+# Recently added the option/ability to run as both pull model (prometheus) and push model (Direct to influx)
 #
 # Contacts
 # Phil Bridges - phbridge@cisco.com
@@ -46,23 +47,32 @@
 
 from flask import Flask             # Flask to serve pages
 from flask import Response          # Flask to serve pages
-import NAT_Stats_Credentials        # Imported credentials
+import credentials                  # Imported credentials
 import logging.handlers             # Needed for loggin
 import time                         # Only for time.sleep
 import wsgiserver                   # from gevent.wsgi
-import argparse                     # Only used for debugging and EULA
+# import argparse                     # Only used for debugging and EULA
 import paramiko                     # used for the SSH session
 import socket                       # only used to raise socket exceptions
 from multiprocessing import Pool    # trying to run in parallel rather than in sequence
+import threading                    # for periodic cron type jobs
+from datetime import timedelta      # calculate x time ago
+from datetime import datetime       # timestamps mostly
+import inspect                      # logging
+import signal
 
-server_IP = "::"
-server_port = 8085
+FLASK_HOST = credentials.FLASK_HOST
+FLASK_PORT = credentials.FLASK_PORT
 # Note absolute logfile path must exist when its run as a service else service will not start properly.
-logfile = "/home/phbridge/Grafana_Prometheus_Stats/grafana_router_nat_stats_%s.log" % server_port
-# Note absolute logfile path must exist when its run as a service else service will not start properly.
-logCount = 4
-logBytes = 1048576
-web_app = Flask('router_nat_stats')
+LOGFILE = credentials.LOGFILE
+INFLUX_MODE = credentials.INFLUX_MODE
+FLASK_MODE = credentials.FLASK_MODE
+MAX_THREADS = credentials.MAX_THREADS
+HOSTS = credentials.HOSTS
+
+THREAD_TO_BREAK = threading.Event()
+
+flask_app = Flask('router_nat_stats')
 
 
 def run_command(session, command, wait):
@@ -74,22 +84,22 @@ def run_command(session, command, wait):
 
 
 def get_total_nat_translations(session, os_type, seed_hostname):
+    function_logger = logger.getChild("%s.%s.%s" % (inspect.stack()[2][3], inspect.stack()[1][3], inspect.stack()[0][3]))
     if os_type == "IOS-XE":
         active_nat_stats_raw = run_command(session, "sho ip nat statistics | i Total active translations", 1)
     elif os_type == "IOS":
         active_nat_stats_raw = run_command(session, "sho ip nat statistics | i Total active translations", 1)
     else:
-        logger.warning(seed_hostname + " ########## OS Not Supported for Active_NAT_Total ##########")
-        results = 'NAT_Active_NAT_Total{host="%s"} %s\n' % (seed_hostname, str(-1))
-        return results
-    logger.debug(seed_hostname + "raw nat output " + active_nat_stats_raw)
+        function_logger.warning(seed_hostname + " ########## OS Not Supported for Active_NAT_Total ##########")
+        return "-1"
+    function_logger.debug(seed_hostname + "raw nat output " + active_nat_stats_raw)
     active_nat_stats = active_nat_stats_raw.splitlines()[-2].split(" ")[3]
-    logger.info(seed_hostname + " active_nat_stats " + active_nat_stats)
-    results = 'NAT_Active_NAT_Total{host="%s"} %s\n' % (seed_hostname, str(active_nat_stats))
-    return results
+    function_logger.info(seed_hostname + " active_nat_stats " + active_nat_stats)
+    return str(active_nat_stats)
 
 
 def get_total_tcp_nat_translations(session, os_type, seed_hostname):
+    function_logger = logger.getChild("%s.%s.%s" % (inspect.stack()[2][3], inspect.stack()[1][3], inspect.stack()[0][3]))
     if os_type == "IOS-XE":
         active_nat_stats_raw = run_command(session, "sho ip nat translations tcp total", 1)
         active_nat_stats = active_nat_stats_raw.splitlines()[-3].split(" ")[4]
@@ -97,16 +107,15 @@ def get_total_tcp_nat_translations(session, os_type, seed_hostname):
         active_nat_stats_raw = run_command(session, "sho ip nat translations tcp | count tcp", 1)
         active_nat_stats = active_nat_stats_raw.splitlines()[-2].split(" ")[7]
     else:
-        logger.warning(seed_hostname + " ########## OS Not Supported for Active_NAT_TCP ##########")
-        results = 'NAT_Active_NAT_TCP{host="%s"} %s\n' % (seed_hostname, str(-1))
-        return results
-    logger.debug(seed_hostname + "raw nat output " + active_nat_stats_raw)
-    logger.info(seed_hostname + " active_nat_tcp_stats " + active_nat_stats)
-    results = 'NAT_Active_NAT_TCP{host="%s"} %s\n' % (seed_hostname, str(active_nat_stats))
-    return results
+        function_logger.warning(seed_hostname + " ########## OS Not Supported for Active_NAT_TCP ##########")
+        return "-1"
+    function_logger.debug(seed_hostname + "raw nat output " + active_nat_stats_raw)
+    function_logger.debug(seed_hostname + " active_nat_tcp_stats " + active_nat_stats)
+    return str(active_nat_stats)
 
 
 def get_total_udp_nat_translations(session, os_type, seed_hostname):
+    function_logger = logger.getChild("%s.%s.%s" % (inspect.stack()[2][3], inspect.stack()[1][3], inspect.stack()[0][3]))
     if os_type == "IOS-XE":
         active_nat_stats_raw = run_command(session, "sho ip nat translations udp total", 1)
         active_nat_stats = active_nat_stats_raw.splitlines()[-3].split(" ")[4]
@@ -114,16 +123,15 @@ def get_total_udp_nat_translations(session, os_type, seed_hostname):
         active_nat_stats_raw = run_command(session, "sho ip nat translations udp | count udp", 1)
         active_nat_stats = active_nat_stats_raw.splitlines()[-2].split(" ")[7]
     else:
-        logger.warning(seed_hostname + " ########## OS Not Supported for Active_NAT_UDP ##########")
-        results = 'NAT_Active_NAT_UDP{host="%s"} %s\n' % (seed_hostname, str(-1))
-        return results
-    logger.debug(seed_hostname + "raw nat output " + active_nat_stats_raw)
-    logger.info(seed_hostname + " active_nat_tcp_stats " + active_nat_stats)
-    results = 'NAT_Active_NAT_UDP{host="%s"} %s\n' % (seed_hostname, str(active_nat_stats))
-    return results
+        function_logger.warning(seed_hostname + " ########## OS Not Supported for Active_NAT_UDP ##########")
+        return "-1"
+    function_logger.debug(seed_hostname + "raw nat output " + active_nat_stats_raw)
+    function_logger.debug(seed_hostname + " active_nat_tcp_stats " + active_nat_stats)
+    return str(active_nat_stats)
 
 
 def get_total_icmp_nat_translations(session, os_type, seed_hostname):
+    function_logger = logger.getChild("%s.%s.%s" % (inspect.stack()[2][3], inspect.stack()[1][3], inspect.stack()[0][3]))
     if os_type == "IOS-XE":
         active_nat_stats_raw = run_command(session, "sho ip nat translations icmp total", 1)
         active_nat_stats = active_nat_stats_raw.splitlines()[-3].split(" ")[4]
@@ -131,231 +139,564 @@ def get_total_icmp_nat_translations(session, os_type, seed_hostname):
         active_nat_stats_raw = run_command(session, "sho ip nat translations icmp | count icmp", 1)
         active_nat_stats = active_nat_stats_raw.splitlines()[-2].split(" ")[7]
     else:
-        logger.warning(seed_hostname + " ########## OS Not Supported for Active_NAT_ICMP ##########")
-        results = 'NAT_Active_NAT_ICMP{host="%s"} %s\n' % (seed_hostname, str(-1))
-        return results
-    logger.debug(seed_hostname + "raw nat output " + active_nat_stats_raw)
-    logger.info(seed_hostname + " active_nat_tcp_stats " + active_nat_stats)
-    results = 'NAT_Active_NAT_ICMP{host="%s"} %s\n' % (seed_hostname, str(active_nat_stats))
-    return results
+        function_logger.warning(seed_hostname + " ########## OS Not Supported for Active_NAT_ICMP ##########")
+        return "-1"
+    function_logger.debug(seed_hostname + "raw nat output " + active_nat_stats_raw)
+    function_logger.debug(seed_hostname + " active_nat_tcp_stats " + active_nat_stats)
+    return str(active_nat_stats)
 
 
-def login_to_host_nat(seed_hostname, seed_username, seed_password, device_OS):
+def login_to_host_nat(seed_hostname, seed_username, seed_password, device_OS, influx=False):
+    function_logger = logger.getChild("%s.%s.%s" % (inspect.stack()[2][3], inspect.stack()[1][3], inspect.stack()[0][3]))
     crawler_connection_pre = paramiko.SSHClient()
     crawler_connection_pre.set_missing_host_key_policy(paramiko.AutoAddPolicy())
     results = ""
     try:
-        logger.debug(seed_hostname + " Starting connection")
+        function_logger.debug(seed_hostname + " Starting connection")
         crawler_connection_pre.connect(hostname=seed_hostname, port=22, username=seed_username, password=seed_password,
                                        look_for_keys=False, allow_agent=False, timeout=10)
-        logger.debug(seed_hostname + " Invoking Shell")
+        function_logger.debug(seed_hostname + " Invoking Shell")
         crawler_connected = crawler_connection_pre.get_transport().open_session()
         crawler_connected.invoke_shell()
         run_command(crawler_connected, "terminal length 0", 1)
-        results += get_total_nat_translations(crawler_connected, device_OS, seed_hostname)
-        results += get_total_tcp_nat_translations(crawler_connected, device_OS, seed_hostname)
-        results += get_total_udp_nat_translations(crawler_connected, device_OS, seed_hostname)
-        results += get_total_icmp_nat_translations(crawler_connected, device_OS, seed_hostname)
+        nat_trans_total = get_total_nat_translations(crawler_connected, device_OS, seed_hostname)
+        nat_trans_icmp = get_total_icmp_nat_translations(crawler_connected, device_OS, seed_hostname)
+        nat_trans_tcp = get_total_tcp_nat_translations(crawler_connected, device_OS, seed_hostname)
+        nat_trans_udp = get_total_udp_nat_translations(crawler_connected, device_OS, seed_hostname)
         crawler_connected.close()
         crawler_connection_pre.close()
+        if influx:
+            results += 'NAT_Translations,host=%s total=%s,icmp=%s,tcp=%s,udp=%s \n' % \
+                       (seed_hostname, nat_trans_total, nat_trans_icmp, nat_trans_tcp, nat_trans_udp)
+        else:
+            results += 'NAT_Active_NAT_Total{host="%s"} %s\n' % (seed_hostname, str(nat_trans_total))
+            results += 'NAT_Active_NAT_ICMP{host="%s"} %s\n' % (seed_hostname, str(nat_trans_icmp))
+            results += 'NAT_Active_NAT_TCP{host="%s"} %s\n' % (seed_hostname, str(nat_trans_tcp))
+            results += 'NAT_Active_NAT_UDP{host="%s"} %s\n' % (seed_hostname, str(nat_trans_udp))
         return results
-
     except paramiko.AuthenticationException:
-        logger.warning(seed_hostname + " ########## Auth Error ##########")
+        function_logger.warning("Auth Error HOST=%s" % seed_hostname)
         return results
     except paramiko.SSHException:
-        logger.warning(seed_hostname + " ########## SSH Error ##########")
+        function_logger.warning("SSH Error HOST=%s" % seed_hostname)
         return results
     except socket.error:
-        logger.warning(seed_hostname + " ########## Socket Error ##########")
+        function_logger.warning("Socket Error HOST=%s" % seed_hostname)
         return results
     except Exception as e:
-        logger.warning(seed_hostname + " ########## Unknown Error " + str(e) + "##########")
+        function_logger.warning("Unknown Error %s HOST=%s ##########" % (str(e), seed_hostname))
         return results
 
 
-def login_to_host_qos(seed_hostname, seed_username, seed_password, device_OS):
+def login_to_host_qos(seed_hostname, seed_username, seed_password, device_OS, influx=False):
+    function_logger = logger.getChild("%s.%s.%s" % (inspect.stack()[2][3], inspect.stack()[1][3], inspect.stack()[0][3]))
     crawler_connection_pre = paramiko.SSHClient()
     crawler_connection_pre.set_missing_host_key_policy(paramiko.AutoAddPolicy())
     results = ""
     try:
-        logger.debug(seed_hostname + " Starting connection")
+        function_logger.debug(seed_hostname + " Starting connection")
         crawler_connection_pre.connect(hostname=seed_hostname, port=22, username=seed_username, password=seed_password,
                                        look_for_keys=False, allow_agent=False, timeout=10)
-        logger.debug(seed_hostname + " Invoking Shell")
+        function_logger.debug(seed_hostname + " Invoking Shell")
         crawler_connected = crawler_connection_pre.get_transport().open_session()
         crawler_connected.invoke_shell()
         run_command(crawler_connected, "terminal length 0", 1)
         qos_output_raw = run_command(crawler_connected, "sho policy-map interface output | i pkts|no-buffer", 1)
-        QoS_PLAT_Pkts = int(qos_output_raw.splitlines()[-12].split(" ")[-1].split("/")[0])
-        QoS_PLAT_Bytes = int(qos_output_raw.splitlines()[-12].split(" ")[-1].split("/")[1])
-        QoS_PLAT_Drops = int(qos_output_raw.splitlines()[-13].split("/")[-2])
-        QoS_GOLD_Pkts = int(qos_output_raw.splitlines()[-10].split(" ")[-1].split("/")[0])
-        QoS_GOLD_Bytes = int(qos_output_raw.splitlines()[-10].split(" ")[-1].split("/")[1])
-        QoS_GOLD_Drops = int(qos_output_raw.splitlines()[-11].split("/")[-3])
-        QoS_SILVER_Pkts = int(qos_output_raw.splitlines()[-8].split(" ")[-1].split("/")[0])
-        QoS_SILVER_Bytes = int(qos_output_raw.splitlines()[-8].split(" ")[-1].split("/")[1])
-        QoS_SILVER_Drops = int(qos_output_raw.splitlines()[-9].split("/")[-3])
-        QoS_BRONZE_Pkts = int(qos_output_raw.splitlines()[-6].split(" ")[-1].split("/")[0])
-        QoS_BRONZE_Bytes = int(qos_output_raw.splitlines()[-6].split(" ")[-1].split("/")[1])
-        QoS_BRONZE_Drops = int(qos_output_raw.splitlines()[-7].split("/")[-3])
-        QoS_TIN_Pkts = int(qos_output_raw.splitlines()[-4].split(" ")[-1].split("/")[0])
-        QoS_TIN_Bytes = int(qos_output_raw.splitlines()[-4].split(" ")[-1].split("/")[1])
-        QoS_TIN_Drops = int(qos_output_raw.splitlines()[-5].split("/")[-3])
-        QoS_DEFAULT_Pkts = int(qos_output_raw.splitlines()[-2].split(" ")[-1].split("/")[0])
-        QoS_DEFAULT_Bytes = int(qos_output_raw.splitlines()[-2].split(" ")[-1].split("/")[1])
-        QoS_DEFAULT_Drops = int(qos_output_raw.splitlines()[-3].split("/")[-3])
-        results += 'QoS_PLAT_OUT_Pkts{host="%s"} %s\n' % (seed_hostname, str(QoS_PLAT_Pkts))
-        results += 'QoS_PLAT_OUT_Bytes{host="%s"} %s\n' % (seed_hostname, str(QoS_PLAT_Bytes))
-        results += 'QoS_PLAT_OUT_Drops{host="%s"} %s\n' % (seed_hostname, str(QoS_PLAT_Drops))
-        results += 'QoS_GOLD_OUT_Pkts{host="%s"} %s\n' % (seed_hostname, str(QoS_GOLD_Pkts))
-        results += 'QoS_GOLD_OUT_Bytes{host="%s"} %s\n' % (seed_hostname, str(QoS_GOLD_Bytes))
-        results += 'QoS_GOLD_OUT_Drops{host="%s"} %s\n' % (seed_hostname, str(QoS_GOLD_Drops))
-        results += 'QoS_SILVER_OUT_Pkts{host="%s"} %s\n' % (seed_hostname, str(QoS_SILVER_Pkts))
-        results += 'QoS_SILVER_OUT_Bytes{host="%s"} %s\n' % (seed_hostname, str(QoS_SILVER_Bytes))
-        results += 'QoS_SILVER_OUT_Drops{host="%s"} %s\n' % (seed_hostname, str(QoS_SILVER_Drops))
-        results += 'QoS_BRONZE_OUT_Pkts{host="%s"} %s\n' % (seed_hostname, str(QoS_BRONZE_Pkts))
-        results += 'QoS_BRONZE_OUT_Bytes{host="%s"} %s\n' % (seed_hostname, str(QoS_BRONZE_Bytes))
-        results += 'QoS_BRONZE_OUT_Drops{host="%s"} %s\n' % (seed_hostname, str(QoS_BRONZE_Drops))
-        results += 'QoS_TIN_OUT_Pkts{host="%s"} %s\n' % (seed_hostname, str(QoS_TIN_Pkts))
-        results += 'QoS_TIN_OUT_Bytes{host="%s"} %s\n' % (seed_hostname, str(QoS_TIN_Bytes))
-        results += 'QoS_TIN_OUT_Drops{host="%s"} %s\n' % (seed_hostname, str(QoS_TIN_Drops))
-        results += 'QoS_DEFAULT_OUT_Pkts{host="%s"} %s\n' % (seed_hostname, str(QoS_DEFAULT_Pkts))
-        results += 'QoS_DEFAULT_OUT_Bytes{host="%s"} %s\n' % (seed_hostname, str(QoS_DEFAULT_Bytes))
-        results += 'QoS_DEFAULT_OUT_Drops{host="%s"} %s\n' % (seed_hostname, str(QoS_DEFAULT_Drops))
+        qos_pla_pkts = int(qos_output_raw.splitlines()[-12].split(" ")[-1].split("/")[0])
+        qos_pla_byte = int(qos_output_raw.splitlines()[-12].split(" ")[-1].split("/")[1])
+        qos_pla_drop = int(qos_output_raw.splitlines()[-13].split("/")[-2])
+        qos_gol_pkts = int(qos_output_raw.splitlines()[-10].split(" ")[-1].split("/")[0])
+        qos_gol_byte = int(qos_output_raw.splitlines()[-10].split(" ")[-1].split("/")[1])
+        qos_gol_drop = int(qos_output_raw.splitlines()[-11].split("/")[-3])
+        qos_sil_pkts = int(qos_output_raw.splitlines()[-8].split(" ")[-1].split("/")[0])
+        qos_sil_byte = int(qos_output_raw.splitlines()[-8].split(" ")[-1].split("/")[1])
+        qos_sil_drop = int(qos_output_raw.splitlines()[-9].split("/")[-3])
+        qos_bro_pkts = int(qos_output_raw.splitlines()[-6].split(" ")[-1].split("/")[0])
+        qos_bro_byte = int(qos_output_raw.splitlines()[-6].split(" ")[-1].split("/")[1])
+        qos_bro_drop = int(qos_output_raw.splitlines()[-7].split("/")[-3])
+        qos_tin_pkts = int(qos_output_raw.splitlines()[-4].split(" ")[-1].split("/")[0])
+        qos_tin_byte = int(qos_output_raw.splitlines()[-4].split(" ")[-1].split("/")[1])
+        qos_tin_drop = int(qos_output_raw.splitlines()[-5].split("/")[-3])
+        qos_dft_pkts = int(qos_output_raw.splitlines()[-2].split(" ")[-1].split("/")[0])
+        qos_dft_byte = int(qos_output_raw.splitlines()[-2].split(" ")[-1].split("/")[1])
+        qos_dft_drop = int(qos_output_raw.splitlines()[-3].split("/")[-3])
+        if influx:
+            results += 'QoS_Stats_Egress,host=%s ' \
+                       'pla_pks=%s,pla_bytes=%s,pla_drops=%s,' \
+                       'gol_pks=%s,gol_bytes=%s,gol_drops=%s,' \
+                       'sil_pks=%s,sil_bytes=%s,sil_drops=%s,' \
+                       'bro_pks=%s,bro_bytes=%s,bro_drops=%s,' \
+                       'tin_pks=%s,tin_bytes=%s,tin_drops=%s,' \
+                       'dft_pks=%s,dft_bytes=%s,dft_drops=%s \n' % \
+                       (seed_hostname,
+                        str(qos_pla_pkts), str(qos_pla_byte), str(qos_pla_drop),
+                        str(qos_gol_pkts), str(qos_gol_byte), str(qos_gol_drop),
+                        str(qos_sil_pkts), str(qos_sil_byte), str(qos_sil_drop),
+                        str(qos_bro_pkts), str(qos_bro_byte), str(qos_bro_drop),
+                        str(qos_tin_pkts), str(qos_tin_byte), str(qos_tin_drop),
+                        str(qos_dft_pkts), str(qos_dft_byte), str(qos_dft_drop))
+        else:
+            results += 'QoS_PLAT_OUT_Pkts{host="%s"} %s\n' % (seed_hostname, str(qos_pla_pkts))
+            results += 'QoS_PLAT_OUT_Bytes{host="%s"} %s\n' % (seed_hostname, str(qos_pla_byte))
+            results += 'QoS_PLAT_OUT_Drops{host="%s"} %s\n' % (seed_hostname, str(qos_pla_drop))
+            results += 'QoS_GOLD_OUT_Pkts{host="%s"} %s\n' % (seed_hostname, str(qos_gol_pkts))
+            results += 'QoS_GOLD_OUT_Bytes{host="%s"} %s\n' % (seed_hostname, str(qos_gol_byte))
+            results += 'QoS_GOLD_OUT_Drops{host="%s"} %s\n' % (seed_hostname, str(qos_gol_drop))
+            results += 'QoS_SILVER_OUT_Pkts{host="%s"} %s\n' % (seed_hostname, str(qos_sil_pkts))
+            results += 'QoS_SILVER_OUT_Bytes{host="%s"} %s\n' % (seed_hostname, str(qos_sil_byte))
+            results += 'QoS_SILVER_OUT_Drops{host="%s"} %s\n' % (seed_hostname, str(qos_sil_drop))
+            results += 'QoS_BRONZE_OUT_Pkts{host="%s"} %s\n' % (seed_hostname, str(qos_bro_pkts))
+            results += 'QoS_BRONZE_OUT_Bytes{host="%s"} %s\n' % (seed_hostname, str(qos_bro_byte))
+            results += 'QoS_BRONZE_OUT_Drops{host="%s"} %s\n' % (seed_hostname, str(qos_bro_drop))
+            results += 'QoS_TIN_OUT_Pkts{host="%s"} %s\n' % (seed_hostname, str(qos_tin_pkts))
+            results += 'QoS_TIN_OUT_Bytes{host="%s"} %s\n' % (seed_hostname, str(qos_tin_byte))
+            results += 'QoS_TIN_OUT_Drops{host="%s"} %s\n' % (seed_hostname, str(qos_tin_drop))
+            results += 'QoS_DEFAULT_OUT_Pkts{host="%s"} %s\n' % (seed_hostname, str(qos_dft_pkts))
+            results += 'QoS_DEFAULT_OUT_Bytes{host="%s"} %s\n' % (seed_hostname, str(qos_dft_byte))
+            results += 'QoS_DEFAULT_OUT_Drops{host="%s"} %s\n' % (seed_hostname, str(qos_dft_drop))
         qos_output_raw_raw = run_command(crawler_connected, "sho policy-map interface input | i packets", 1)
         for line in qos_output_raw_raw.splitlines():
             if "        " not in str(line):
                 qos_output_raw += str(line + "\n")
-        QoS_PLAT_Pkts = int(qos_output_raw.splitlines()[-7].split(" ")[-4])
-        QoS_PLAT_Bytes = int(qos_output_raw.splitlines()[-7].split(" ")[-2])
-        QoS_GOLD_Pkts = int(qos_output_raw.splitlines()[-6].split(" ")[-4])
-        QoS_GOLD_Bytes = int(qos_output_raw.splitlines()[-6].split(" ")[-2])
-        QoS_SILVER_Pkts = int(qos_output_raw.splitlines()[-5].split(" ")[-4])
-        QoS_SILVER_Bytes = int(qos_output_raw.splitlines()[-5].split(" ")[-2])
-        QoS_BRONZE_Pkts = int(qos_output_raw.splitlines()[-4].split(" ")[-4])
-        QoS_BRONZE_Bytes = int(qos_output_raw.splitlines()[-4].split(" ")[-2])
-        QoS_TIN_Pkts = int(qos_output_raw.splitlines()[-3].split(" ")[-4])
-        QoS_TIN_Bytes = int(qos_output_raw.splitlines()[-3].split(" ")[-2])
-        QoS_DEFAULT_Pkts = int(qos_output_raw.splitlines()[-2].split(" ")[-4])
-        QoS_DEFAULT_Bytes = int(qos_output_raw.splitlines()[-2].split(" ")[-2])
-        results += 'QoS_PLAT_IN_Pkts{host="%s"} %s\n' % (seed_hostname, str(QoS_PLAT_Pkts))
-        results += 'QoS_PLAT_IN_Bytes{host="%s"} %s\n' % (seed_hostname, str(QoS_PLAT_Bytes))
-        results += 'QoS_GOLD_IN_Pkts{host="%s"} %s\n' % (seed_hostname, str(QoS_GOLD_Pkts))
-        results += 'QoS_GOLD_IN_Bytes{host="%s"} %s\n' % (seed_hostname, str(QoS_GOLD_Bytes))
-        results += 'QoS_SILVER_IN_Pkts{host="%s"} %s\n' % (seed_hostname, str(QoS_SILVER_Pkts))
-        results += 'QoS_SILVER_IN_Bytes{host="%s"} %s\n' % (seed_hostname, str(QoS_SILVER_Bytes))
-        results += 'QoS_BRONZE_IN_Pkts{host="%s"} %s\n' % (seed_hostname, str(QoS_BRONZE_Pkts))
-        results += 'QoS_BRONZE_IN_Bytes{host="%s"} %s\n' % (seed_hostname, str(QoS_BRONZE_Bytes))
-        results += 'QoS_TIN_IN_Pkts{host="%s"} %s\n' % (seed_hostname, str(QoS_TIN_Pkts))
-        results += 'QoS_TIN_IN_Bytes{host="%s"} %s\n' % (seed_hostname, str(QoS_TIN_Bytes))
-        results += 'QoS_DEFAULT_IN_Pkts{host="%s"} %s\n' % (seed_hostname, str(QoS_DEFAULT_Pkts))
-        results += 'QoS_DEFAULT_IN_Bytes{host="%s"} %s\n' % (seed_hostname, str(QoS_DEFAULT_Bytes))
+        qos_pla_pkts = int(qos_output_raw.splitlines()[-7].split(" ")[-4])
+        qos_pla_byte = int(qos_output_raw.splitlines()[-7].split(" ")[-2])
+        qos_gol_pkts = int(qos_output_raw.splitlines()[-6].split(" ")[-4])
+        qos_gol_byte = int(qos_output_raw.splitlines()[-6].split(" ")[-2])
+        qos_sil_pkts = int(qos_output_raw.splitlines()[-5].split(" ")[-4])
+        qos_sil_byte = int(qos_output_raw.splitlines()[-5].split(" ")[-2])
+        qos_bro_pkts = int(qos_output_raw.splitlines()[-4].split(" ")[-4])
+        qos_bro_byte = int(qos_output_raw.splitlines()[-4].split(" ")[-2])
+        qos_tin_pkts = int(qos_output_raw.splitlines()[-3].split(" ")[-4])
+        qos_tin_byte = int(qos_output_raw.splitlines()[-3].split(" ")[-2])
+        qos_dft_pkts = int(qos_output_raw.splitlines()[-2].split(" ")[-4])
+        qos_dft_byte = int(qos_output_raw.splitlines()[-2].split(" ")[-2])
+        if influx is None:
+            results += 'QoS_PLAT_IN_Pkts{host="%s"} %s\n' % (seed_hostname, str(qos_pla_pkts))
+            results += 'QoS_PLAT_IN_Bytes{host="%s"} %s\n' % (seed_hostname, str(qos_pla_byte))
+            results += 'QoS_GOLD_IN_Pkts{host="%s"} %s\n' % (seed_hostname, str(qos_gol_pkts))
+            results += 'QoS_GOLD_IN_Bytes{host="%s"} %s\n' % (seed_hostname, str(qos_gol_byte))
+            results += 'QoS_SILVER_IN_Pkts{host="%s"} %s\n' % (seed_hostname, str(qos_sil_pkts))
+            results += 'QoS_SILVER_IN_Bytes{host="%s"} %s\n' % (seed_hostname, str(qos_sil_byte))
+            results += 'QoS_BRONZE_IN_Pkts{host="%s"} %s\n' % (seed_hostname, str(qos_bro_pkts))
+            results += 'QoS_BRONZE_IN_Bytes{host="%s"} %s\n' % (seed_hostname, str(qos_bro_byte))
+            results += 'QoS_TIN_IN_Pkts{host="%s"} %s\n' % (seed_hostname, str(qos_tin_pkts))
+            results += 'QoS_TIN_IN_Bytes{host="%s"} %s\n' % (seed_hostname, str(qos_tin_byte))
+            results += 'QoS_DEFAULT_IN_Pkts{host="%s"} %s\n' % (seed_hostname, str(qos_dft_pkts))
+            results += 'QoS_DEFAULT_IN_Bytes{host="%s"} %s\n' % (seed_hostname, str(qos_dft_byte))
+        else:
+            results += 'QoS_Stats_Ingress,host=%s ' \
+                       'pla_pks=%s,pla_bytes=%s,' \
+                       'gol_pks=%s,gol_bytes=%s,' \
+                       'sil_pks=%s,sil_bytes=%s,' \
+                       'bro_pks=%s,bro_bytes=%s,' \
+                       'tin_pks=%s,tin_bytes=%s,' \
+                       'dft_pks=%s,dft_bytes=%s \n' % \
+                       (seed_hostname,
+                        str(qos_pla_pkts), str(qos_pla_byte),
+                        str(qos_gol_pkts), str(qos_gol_byte),
+                        str(qos_sil_pkts), str(qos_sil_byte),
+                        str(qos_bro_pkts), str(qos_bro_byte),
+                        str(qos_tin_pkts), str(qos_tin_byte),
+                        str(qos_dft_pkts), str(qos_dft_byte))
         crawler_connected.close()
         crawler_connection_pre.close()
         return results
     except paramiko.AuthenticationException:
-        logger.warning(seed_hostname + " ########## Auth Error ##########")
+        function_logger.warning("Auth Error HOST=%s" % seed_hostname)
         return results
     except paramiko.SSHException:
-        logger.warning(seed_hostname + " ########## SSH Error ##########")
+        function_logger.warning("SSH Error HOST=%s" % seed_hostname)
         return results
     except socket.error:
-        logger.warning(seed_hostname + " ########## Socket Error ##########")
+        function_logger.warning("Socket Error HOST=%s" % seed_hostname)
         return results
     except Exception as e:
-        logger.warning(seed_hostname + " ########## Unknown Error " + str(e) + "##########")
+        function_logger.warning("Unknown Error %s HOST=%s ##########" % (str(e), seed_hostname))
         return results
 
 
-def process_hosts_in_parallel_nat():
-    logger.info("----------- Processing Parallel -----------")
+def login_to_host_combined(seed_hostname, seed_username, seed_password, device_OS, influx=False):
+    function_logger = logger.getChild("%s.%s.%s" % (inspect.stack()[2][3], inspect.stack()[1][3], inspect.stack()[0][3]))
+    crawler_connection_pre = paramiko.SSHClient()
+    crawler_connection_pre.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+    results = ""
+    try:
+        function_logger.debug(seed_hostname + " Starting connection")
+        crawler_connection_pre.connect(hostname=seed_hostname, port=22, username=seed_username, password=seed_password,
+                                       look_for_keys=False, allow_agent=False, timeout=10)
+        function_logger.debug(seed_hostname + " Invoking Shell")
+        crawler_connected = crawler_connection_pre.get_transport().open_session()
+        crawler_connected.invoke_shell()
+        run_command(crawler_connected, "terminal length 0", 1)
+        nat_trans_total = get_total_nat_translations(crawler_connected, device_OS, seed_hostname)
+        nat_trans_icmp = get_total_icmp_nat_translations(crawler_connected, device_OS, seed_hostname)
+        nat_trans_tcp = get_total_tcp_nat_translations(crawler_connected, device_OS, seed_hostname)
+        nat_trans_udp = get_total_udp_nat_translations(crawler_connected, device_OS, seed_hostname)
+        if influx:
+            results += 'NAT_Translations,host=%s total=%s,icmp=%s,tcp=%s,udp=%s \n' % \
+                       (seed_hostname, nat_trans_total, nat_trans_icmp, nat_trans_tcp, nat_trans_udp)
+        else:
+            results += 'NAT_Active_NAT_Total{host="%s"} %s\n' % (seed_hostname, str(nat_trans_total))
+            results += 'NAT_Active_NAT_ICMP{host="%s"} %s\n' % (seed_hostname, str(nat_trans_icmp))
+            results += 'NAT_Active_NAT_TCP{host="%s"} %s\n' % (seed_hostname, str(nat_trans_tcp))
+            results += 'NAT_Active_NAT_UDP{host="%s"} %s\n' % (seed_hostname, str(nat_trans_udp))
+        qos_output_raw = run_command(crawler_connected, "sho policy-map interface output | i pkts|no-buffer", 1)
+        qos_pla_pkts = int(qos_output_raw.splitlines()[-12].split(" ")[-1].split("/")[0])
+        qos_pla_byte = int(qos_output_raw.splitlines()[-12].split(" ")[-1].split("/")[1])
+        qos_pla_drop = int(qos_output_raw.splitlines()[-13].split("/")[-2])
+        qos_gol_pkts = int(qos_output_raw.splitlines()[-10].split(" ")[-1].split("/")[0])
+        qos_gol_byte = int(qos_output_raw.splitlines()[-10].split(" ")[-1].split("/")[1])
+        qos_gol_drop = int(qos_output_raw.splitlines()[-11].split("/")[-3])
+        qos_sil_pkts = int(qos_output_raw.splitlines()[-8].split(" ")[-1].split("/")[0])
+        qos_sil_byte = int(qos_output_raw.splitlines()[-8].split(" ")[-1].split("/")[1])
+        qos_sil_drop = int(qos_output_raw.splitlines()[-9].split("/")[-3])
+        qos_bro_pkts = int(qos_output_raw.splitlines()[-6].split(" ")[-1].split("/")[0])
+        qos_bro_byte = int(qos_output_raw.splitlines()[-6].split(" ")[-1].split("/")[1])
+        qos_bro_drop = int(qos_output_raw.splitlines()[-7].split("/")[-3])
+        qos_tin_pkts = int(qos_output_raw.splitlines()[-4].split(" ")[-1].split("/")[0])
+        qos_tin_byte = int(qos_output_raw.splitlines()[-4].split(" ")[-1].split("/")[1])
+        qos_tin_drop = int(qos_output_raw.splitlines()[-5].split("/")[-3])
+        qos_dft_pkts = int(qos_output_raw.splitlines()[-2].split(" ")[-1].split("/")[0])
+        qos_dft_byte = int(qos_output_raw.splitlines()[-2].split(" ")[-1].split("/")[1])
+        qos_dft_drop = int(qos_output_raw.splitlines()[-3].split("/")[-3])
+        if influx:
+            results += 'QoS_Stats_Egress,host=%s ' \
+                       'pla_pks=%s,pla_bytes=%s,pla_drops=%s,' \
+                       'gol_pks=%s,gol_bytes=%s,gol_drops=%s,' \
+                       'sil_pks=%s,sil_bytes=%s,sil_drops=%s,' \
+                       'bro_pks=%s,bro_bytes=%s,bro_drops=%s,' \
+                       'tin_pks=%s,tin_bytes=%s,tin_drops=%s,' \
+                       'dft_pks=%s,dft_bytes=%s,dft_drops=%s \n' % \
+                       (seed_hostname,
+                        str(qos_pla_pkts), str(qos_pla_byte), str(qos_pla_drop),
+                        str(qos_gol_pkts), str(qos_gol_byte), str(qos_gol_drop),
+                        str(qos_sil_pkts), str(qos_sil_byte), str(qos_sil_drop),
+                        str(qos_bro_pkts), str(qos_bro_byte), str(qos_bro_drop),
+                        str(qos_tin_pkts), str(qos_tin_byte), str(qos_tin_drop),
+                        str(qos_dft_pkts), str(qos_dft_byte), str(qos_dft_drop))
+        else:
+            results += 'QoS_PLAT_OUT_Pkts{host="%s"} %s\n' % (seed_hostname, str(qos_pla_pkts))
+            results += 'QoS_PLAT_OUT_Bytes{host="%s"} %s\n' % (seed_hostname, str(qos_pla_byte))
+            results += 'QoS_PLAT_OUT_Drops{host="%s"} %s\n' % (seed_hostname, str(qos_pla_drop))
+            results += 'QoS_GOLD_OUT_Pkts{host="%s"} %s\n' % (seed_hostname, str(qos_gol_pkts))
+            results += 'QoS_GOLD_OUT_Bytes{host="%s"} %s\n' % (seed_hostname, str(qos_gol_byte))
+            results += 'QoS_GOLD_OUT_Drops{host="%s"} %s\n' % (seed_hostname, str(qos_gol_drop))
+            results += 'QoS_SILVER_OUT_Pkts{host="%s"} %s\n' % (seed_hostname, str(qos_sil_pkts))
+            results += 'QoS_SILVER_OUT_Bytes{host="%s"} %s\n' % (seed_hostname, str(qos_sil_byte))
+            results += 'QoS_SILVER_OUT_Drops{host="%s"} %s\n' % (seed_hostname, str(qos_sil_drop))
+            results += 'QoS_BRONZE_OUT_Pkts{host="%s"} %s\n' % (seed_hostname, str(qos_bro_pkts))
+            results += 'QoS_BRONZE_OUT_Bytes{host="%s"} %s\n' % (seed_hostname, str(qos_bro_byte))
+            results += 'QoS_BRONZE_OUT_Drops{host="%s"} %s\n' % (seed_hostname, str(qos_bro_drop))
+            results += 'QoS_TIN_OUT_Pkts{host="%s"} %s\n' % (seed_hostname, str(qos_tin_pkts))
+            results += 'QoS_TIN_OUT_Bytes{host="%s"} %s\n' % (seed_hostname, str(qos_tin_byte))
+            results += 'QoS_TIN_OUT_Drops{host="%s"} %s\n' % (seed_hostname, str(qos_tin_drop))
+            results += 'QoS_DEFAULT_OUT_Pkts{host="%s"} %s\n' % (seed_hostname, str(qos_dft_pkts))
+            results += 'QoS_DEFAULT_OUT_Bytes{host="%s"} %s\n' % (seed_hostname, str(qos_dft_byte))
+            results += 'QoS_DEFAULT_OUT_Drops{host="%s"} %s\n' % (seed_hostname, str(qos_dft_drop))
+        qos_output_raw_raw = run_command(crawler_connected, "sho policy-map interface input | i packets", 1)
+        for line in qos_output_raw_raw.splitlines():
+            if "        " not in str(line):
+                qos_output_raw += str(line + "\n")
+        qos_pla_pkts = int(qos_output_raw.splitlines()[-7].split(" ")[-4])
+        qos_pla_byte = int(qos_output_raw.splitlines()[-7].split(" ")[-2])
+        qos_gol_pkts = int(qos_output_raw.splitlines()[-6].split(" ")[-4])
+        qos_gol_byte = int(qos_output_raw.splitlines()[-6].split(" ")[-2])
+        qos_sil_pkts = int(qos_output_raw.splitlines()[-5].split(" ")[-4])
+        qos_sil_byte = int(qos_output_raw.splitlines()[-5].split(" ")[-2])
+        qos_bro_pkts = int(qos_output_raw.splitlines()[-4].split(" ")[-4])
+        qos_bro_byte = int(qos_output_raw.splitlines()[-4].split(" ")[-2])
+        qos_tin_pkts = int(qos_output_raw.splitlines()[-3].split(" ")[-4])
+        qos_tin_byte = int(qos_output_raw.splitlines()[-3].split(" ")[-2])
+        qos_dft_pkts = int(qos_output_raw.splitlines()[-2].split(" ")[-4])
+        qos_dft_byte = int(qos_output_raw.splitlines()[-2].split(" ")[-2])
+        if influx is None:
+            results += 'QoS_PLAT_IN_Pkts{host="%s"} %s\n' % (seed_hostname, str(qos_pla_pkts))
+            results += 'QoS_PLAT_IN_Bytes{host="%s"} %s\n' % (seed_hostname, str(qos_pla_byte))
+            results += 'QoS_GOLD_IN_Pkts{host="%s"} %s\n' % (seed_hostname, str(qos_gol_pkts))
+            results += 'QoS_GOLD_IN_Bytes{host="%s"} %s\n' % (seed_hostname, str(qos_gol_byte))
+            results += 'QoS_SILVER_IN_Pkts{host="%s"} %s\n' % (seed_hostname, str(qos_sil_pkts))
+            results += 'QoS_SILVER_IN_Bytes{host="%s"} %s\n' % (seed_hostname, str(qos_sil_byte))
+            results += 'QoS_BRONZE_IN_Pkts{host="%s"} %s\n' % (seed_hostname, str(qos_bro_pkts))
+            results += 'QoS_BRONZE_IN_Bytes{host="%s"} %s\n' % (seed_hostname, str(qos_bro_byte))
+            results += 'QoS_TIN_IN_Pkts{host="%s"} %s\n' % (seed_hostname, str(qos_tin_pkts))
+            results += 'QoS_TIN_IN_Bytes{host="%s"} %s\n' % (seed_hostname, str(qos_tin_byte))
+            results += 'QoS_DEFAULT_IN_Pkts{host="%s"} %s\n' % (seed_hostname, str(qos_dft_pkts))
+            results += 'QoS_DEFAULT_IN_Bytes{host="%s"} %s\n' % (seed_hostname, str(qos_dft_byte))
+        else:
+            results += 'QoS_Stats_Ingress,host=%s ' \
+                       'pla_pks=%s,pla_bytes=%s,' \
+                       'gol_pks=%s,gol_bytes=%s,' \
+                       'sil_pks=%s,sil_bytes=%s,' \
+                       'bro_pks=%s,bro_bytes=%s,' \
+                       'tin_pks=%s,tin_bytes=%s,' \
+                       'dft_pks=%s,dft_bytes=%s \n' % \
+                       (seed_hostname,
+                        str(qos_pla_pkts), str(qos_pla_byte),
+                        str(qos_gol_pkts), str(qos_gol_byte),
+                        str(qos_sil_pkts), str(qos_sil_byte),
+                        str(qos_bro_pkts), str(qos_bro_byte),
+                        str(qos_tin_pkts), str(qos_tin_byte),
+                        str(qos_dft_pkts), str(qos_dft_byte))
+        crawler_connected.close()
+        crawler_connection_pre.close()
+        return results
+    except paramiko.AuthenticationException:
+        function_logger.warning("Auth Error HOST=%s" % seed_hostname)
+        return results
+    except paramiko.SSHException:
+        function_logger.warning("SSH Error HOST=%s" % seed_hostname)
+        return results
+    except socket.error:
+        function_logger.warning("Socket Error HOST=%s" % seed_hostname)
+        return results
+    except Exception as e:
+        function_logger.warning("Unknown Error %s HOST=%s ##########" % (str(e), seed_hostname))
+        return results
+
+
+def process_hosts_in_parallel_combined(influx=False):
+    function_logger = logger.getChild("%s.%s.%s" % (inspect.stack()[2][3], inspect.stack()[1][3], inspect.stack()[0][3]))
+    function_logger.info("----------- Processing Parallel -----------")
     results = ""
     hosts = []
-    for each in NAT_Stats_Credentials.hosts:
+    for each in HOSTS:
         host_details = []
         host_details.append(each['host'])
         host_details.append(each['username'])
         host_details.append(each['password'])
         host_details.append(each['OS'])
+        if influx:
+            host_details.append(True)
         hosts.append(host_details)
-    with Pool(processes=args.max_threads) as process_worker:
+    with Pool(processes=MAX_THREADS) as process_worker:
+        results = process_worker.starmap(login_to_host_combined, hosts)
+    return results
+
+
+def process_hosts_in_parallel_nat(influx=False):
+    function_logger = logger.getChild("%s.%s.%s" % (inspect.stack()[2][3], inspect.stack()[1][3], inspect.stack()[0][3]))
+    function_logger.info("----------- Processing Parallel -----------")
+    results = ""
+    hosts = []
+    for each in HOSTS:
+        host_details = []
+        host_details.append(each['host'])
+        host_details.append(each['username'])
+        host_details.append(each['password'])
+        host_details.append(each['OS'])
+        if influx:
+            host_details.append(True)
+        hosts.append(host_details)
+    with Pool(processes=MAX_THREADS) as process_worker:
         results = process_worker.starmap(login_to_host_nat, hosts)
     return results
 
 
-def process_hosts_in_parallel_qos():
-    logger.info("----------- Processing Parallel -----------")
+def process_hosts_in_parallel_qos(influx=False):
+    function_logger = logger.getChild("%s.%s.%s" % (inspect.stack()[2][3], inspect.stack()[1][3], inspect.stack()[0][3]))
+    function_logger.info("----------- Processing Parallel -----------")
     results = ""
     hosts = []
-    for each in NAT_Stats_Credentials.hosts:
+    for each in HOSTS:
         host_details = []
         host_details.append(each['host'])
         host_details.append(each['username'])
         host_details.append(each['password'])
         host_details.append(each['OS'])
         hosts.append(host_details)
-    with Pool(processes=args.max_threads) as process_worker:
+        if influx:
+            host_details.append(True)
+    with Pool(processes=MAX_THREADS) as process_worker:
         results = process_worker.starmap(login_to_host_qos, hosts)
     return results
 
 
-def parse_all_arguments():
-    parser = argparse.ArgumentParser(description='process input')
-    parser.add_argument("-d", "--debug", action='store_true', default=False, help="increase output verbosity", )
-    parser.add_argument("-s", "--single_thread", action='store_true', default=False, help="run in single threaded mode")
-    parser.add_argument("-t", "--max_threads", default=10, help="max number of threads to run in parrellel")
-    parser.add_argument("-ACCEPTEULA", "--acceptedeula", action='store_true', default=False,
-                        help="Marking this flag accepts EULA embedded withing the script")
-    args = parser.parse_args()
-    if not args.acceptedeula:
-        print("""you need to accept the EULA agreement which is as follows:-
-    # EULA
-    # This software is provided as is and with zero support level. Support can be purchased by providing Phil bridges 
-    # with a varity of Beer, Wine, Steak and Greggs pasties. Please contact phbridge@cisco.com for support costs and 
-    # arrangements. Until provison of alcohol or baked goodies your on your own but there is no rocket sciecne 
-    # involved so dont panic too much. To accept this EULA you must include the correct flag when running the script. 
-    # If this script goes crazy wrong and breaks everything then your also on your own and Phil will not accept any 
-    # liability of any type or kind. As this script belongs to Phil and NOT Cisco then Cisco cannot be held 
-    # responsable for its use or if it goes bad, nor can Cisco make any profit from this script. Phil can profit 
-    # from this script but will not assume any liability. Other than the boaring stuff please enjoy and plagerise 
-    # as you like (as I have no ways to stop you) but common curtacy says to credit me in some way. 
-    # [see above comments on Beer, Wine, Steak and Greggs.].
+# def parse_all_arguments():
+#     function_logger = logger.getChild("%s.%s.%s" % (inspect.stack()[2][3], inspect.stack()[1][3], inspect.stack()[0][3]))
+#     parser = argparse.ArgumentParser(description='process input')
+#     parser.add_argument("-d", "--debug", action='store_true', default=False, help="increase output verbosity", )
+#     parser.add_argument("-s", "--single_thread", action='store_true', default=False, help="run in single threaded mode")
+#     parser.add_argument("-t", "--max_threads", default=10, help="max number of threads to run in parrellel")
+#     parser.add_argument("-ACCEPTEULA", "--acceptedeula", action='store_true', default=False,
+#                         help="Marking this flag accepts EULA embedded withing the script")
+#     args = parser.parse_args()
+#     if not args.acceptedeula:
+#         print("""you need to accept the EULA agreement which is as follows:-
+#     # EULA
+#     # This software is provided as is and with zero support level. Support can be purchased by providing Phil bridges
+#     # with a varity of Beer, Wine, Steak and Greggs pasties. Please contact phbridge@cisco.com for support costs and
+#     # arrangements. Until provison of alcohol or baked goodies your on your own but there is no rocket sciecne
+#     # involved so dont panic too much. To accept this EULA you must include the correct flag when running the script.
+#     # If this script goes crazy wrong and breaks everything then your also on your own and Phil will not accept any
+#     # liability of any type or kind. As this script belongs to Phil and NOT Cisco then Cisco cannot be held
+#     # responsable for its use or if it goes bad, nor can Cisco make any profit from this script. Phil can profit
+#     # from this script but will not assume any liability. Other than the boaring stuff please enjoy and plagerise
+#     # as you like (as I have no ways to stop you) but common curtacy says to credit me in some way.
+#     # [see above comments on Beer, Wine, Steak and Greggs.].
+#
+#     # To accept the EULA please run with the -ACCEPTEULA flag
+#         """)
+#         quit()
+#     return args
 
-    # To accept the EULA please run with the -ACCEPTEULA flag
-        """)
-        quit()
-    return args
 
-
-@web_app.route('/nat_stats')
+@flask_app.route('/nat_stats')
 # gets called via the http://127.0.0.1:8082/nat_stats
 def get_stats_nat():
+    function_logger = logger.getChild("%s.%s.%s" % (inspect.stack()[2][3], inspect.stack()[1][3], inspect.stack()[0][3]))
     results = process_hosts_in_parallel_nat()
     return Response(results, mimetype='text/plain')
 
 
-@web_app.route('/qos_stats')
+@flask_app.route('/qos_stats')
 # gets called via the http://127.0.0.1:8082/qos_stats
 def get_stats_qos():
+    function_logger = logger.getChild("%s.%s.%s" % (inspect.stack()[2][3], inspect.stack()[1][3], inspect.stack()[0][3]))
     results = process_hosts_in_parallel_qos()
     return Response(results, mimetype='text/plain')
 
 
+def graceful_killer(signal_number, frame):
+    function_logger = logger.getChild("%s.%s.%s" % (inspect.stack()[2][3], inspect.stack()[1][3], inspect.stack()[0][3]))
+    function_logger.info("Got Kill signal")
+    function_logger.info('Received:' + str(signal_number))
+    THREAD_TO_BREAK.set()
+    function_logger.info("set thread to break")
+    if INFLUX_MODE:
+        router_stats_thread.join()
+    function_logger.info("joined all threads")
+    if FLASK_MODE:
+        http_server.stop()
+        function_logger.info("stopped HTTP server")
+    quit()
+
+
+def router_stats_combined():
+    function_logger = logger.getChild("%s.%s.%s" % (inspect.stack()[2][3], inspect.stack()[1][3], inspect.stack()[0][3]))
+    function_logger.info("cpu_metrics_thread")
+    historical_upload = ""
+    while not THREAD_TO_BREAK.is_set():
+        now = datetime.now()
+        timestamp_string = str(int(now.timestamp()) * 1000000000)
+        future = now + timedelta(seconds=30)
+        influx_upload = ""
+        influx_upload += process_hosts_in_parallel_combined(influx=True)
+        to_send = ""
+        for each in influx_upload.splitlines():
+            to_send += each + " " + timestamp_string + "\n"
+        if not historical_upload == "":
+            function_logger.debug("adding history to upload")
+            to_send += historical_upload
+        if update_influx(to_send):
+            historical_upload = ""
+        else:
+            function_logger.debug("adding to history")
+            historical_upload += to_send
+        time_to_sleep = (future - datetime.now()).seconds
+        if 30 > time_to_sleep > 0:
+            THREAD_TO_BREAK.wait(time_to_sleep)
+
+
+def update_influx(raw_string, timestamp=None):
+    function_logger = logger.getChild("%s.%s.%s" % (inspect.stack()[2][3], inspect.stack()[1][3], inspect.stack()[0][3]))
+    function_logger.debug("update_influx")
+    try:
+        string_to_upload = ""
+        if timestamp is not None:
+            timestamp_string = str(int(timestamp.timestamp()) * 1000000000)
+            for each in raw_string.splitlines():
+                string_to_upload += each + " " + timestamp_string + "\n"
+        else:
+            string_to_upload = raw_string
+        success_array = []
+        upload_to_influx_sessions = requests.session()
+        for influx_url in INFLUX_DB_Path:
+            success = False
+            attempts = 0
+            attempt_error_array = []
+            while attempts < 5 and not success:
+                try:
+                    upload_to_influx_sessions_response = upload_to_influx_sessions.post(url=influx_url, data=string_to_upload, timeout=(2, 1))
+                    if upload_to_influx_sessions_response.status_code == 204:
+                        function_logger.debug("content=%s" % upload_to_influx_sessions_response.content)
+                        success = True
+                    else:
+                        attempts += 1
+                        function_logger.warning("status_code=%s" % upload_to_influx_sessions_response.status_code)
+                        function_logger.warning("content=%s" % upload_to_influx_sessions_response.content)
+                except requests.exceptions.ConnectTimeout as e:
+                    attempts += 1
+                    function_logger.debug("update_influx - attempted " + str(attempts) + " Failed Connection Timeout")
+                    function_logger.debug("update_influx - Unexpected error:" + str(sys.exc_info()[0]))
+                    function_logger.debug("update_influx - Unexpected error:" + str(e))
+                    function_logger.debug("update_influx - String was:" + str(string_to_upload).splitlines()[0])
+                    function_logger.debug("update_influx - TRACEBACK=" + str(traceback.format_exc()))
+                    attempt_error_array.append(str(sys.exc_info()[0]))
+                except requests.exceptions.ConnectionError as e:
+                    attempts += 1
+                    function_logger.debug("update_influx - attempted " + str(attempts) + " Failed Connection Error")
+                    function_logger.debug("update_influx - Unexpected error:" + str(sys.exc_info()[0]))
+                    function_logger.debug("update_influx - Unexpected error:" + str(e))
+                    function_logger.debug("update_influx - String was:" + str(string_to_upload).splitlines()[0])
+                    function_logger.debug("update_influx - TRACEBACK=" + str(traceback.format_exc()))
+                    attempt_error_array.append(str(sys.exc_info()[0]))
+                except Exception as e:
+                    function_logger.error("update_influx - attempted " + str(attempts) + " Failed")
+                    function_logger.error("update_influx - Unexpected error:" + str(sys.exc_info()[0]))
+                    function_logger.error("update_influx - Unexpected error:" + str(e))
+                    function_logger.error("update_influx - String was:" + str(string_to_upload).splitlines()[0])
+                    function_logger.debug("update_influx - TRACEBACK=" + str(traceback.format_exc()))
+                    attempt_error_array.append(str(sys.exc_info()[0]))
+                    break
+            success_array.append(success)
+        upload_to_influx_sessions.close()
+        super_success = False
+        for each in success_array:
+            if not each:
+                super_success = False
+                break
+            else:
+                super_success = True
+        if not super_success:
+            function_logger.error("update_influx - FAILED after 5 attempts. Failed up update " + str(string_to_upload.splitlines()[0]))
+            function_logger.error("update_influx - FAILED after 5 attempts. attempt_error_array: " + str(attempt_error_array))
+            return False
+        else:
+            function_logger.debug("update_influx - " + "string for influx is " + str(string_to_upload))
+            function_logger.debug("update_influx - " + "influx status code is  " + str(upload_to_influx_sessions_response.status_code))
+            function_logger.debug("update_influx - " + "influx response is code is " + str(upload_to_influx_sessions_response.text[0:1000]))
+            return True
+    except Exception as e:
+        function_logger.error("update_influx - something went bad sending to InfluxDB")
+        function_logger.error("update_influx - Unexpected error:" + str(sys.exc_info()[0]))
+        function_logger.error("update_influx - Unexpected error:" + str(e))
+        function_logger.error("update_influx - TRACEBACK=" + str(traceback.format_exc()))
+    return False
+
+
 if __name__ == '__main__':
-    args = parse_all_arguments()
-    print("grafana_router_nat_stats Service Started")
-    # Enable logging
-    logger = logging.getLogger("grafana_router_nat_stats")
-    if args.debug:
-        logger.setLevel(logging.DEBUG)
-    else:
-        logger.setLevel(logging.INFO)
-    handler = logging.handlers.RotatingFileHandler(logfile, maxBytes=logBytes, backupCount=logCount)
-    formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
-    handler.setFormatter(formatter)
-    logger.addHandler(handler)
+    # Create Logger
+    logger = logging.getLogger("Python_Monitor")
+    logger_handler = logging.handlers.TimedRotatingFileHandler(LOGFILE, backupCount=365, when='D')
+    logger_formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(process)d:%(thread)d:%(name)s - %(message)s')
+    logger_handler.setFormatter(logger_formatter)
+    logger.addHandler(logger_handler)
+    logger.setLevel(logging.INFO)
     logger.info("---------------------- STARTING ----------------------")
-    logger.info("grafana_router_nat_stats script started")
-    http_server = wsgiserver.WSGIServer(host=server_IP, port=server_port, wsgi_app=web_app)
-    http_server.start()
+    logger.info("__main__ - " + "Python Monitor Logger")
+
+    # Catch SIGTERM etc
+    signal.signal(signal.SIGHUP, graceful_killer)
+    signal.signal(signal.SIGTERM, graceful_killer)
+
+    # Start the cron type jobs
+    logger.info("start the cron update thread")
+    if INFLUX_MODE:
+        router_stats_thread = threading.Thread(target=lambda: router_stats_combined())
+        router_stats_thread.start()
+
+    # build flask instance.
+    if FLASK_MODE:
+        logger.info("__main__ - " + "starting flask")
+        http_server = wsgiserver.WSGIServer(host=FLASK_HOST, port=FLASK_PORT, wsgi_app=flask_app)
+        http_server.start()
