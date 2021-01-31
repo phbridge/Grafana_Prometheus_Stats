@@ -90,9 +90,9 @@ def run_command(session, command, wait):
 def get_total_nat_translations(session, os_type, seed_hostname):
     function_logger = logger.getChild("%s.%s.%s" % (inspect.stack()[2][3], inspect.stack()[1][3], inspect.stack()[0][3]))
     if os_type == "IOS-XE":
-        active_nat_stats_raw = run_command(session, "sho ip nat statistics | i Total active translations", 2)
+        active_nat_stats_raw = run_command(session, "sho ip nat statistics | i Total active translations", 3)
     elif os_type == "IOS":
-        active_nat_stats_raw = run_command(session, "sho ip nat statistics | i Total active translations", 2)
+        active_nat_stats_raw = run_command(session, "sho ip nat statistics | i Total active translations", 3)
     else:
         function_logger.warning(seed_hostname + " ########## OS Not Supported for Active_NAT_Total ##########")
         return "-1"
@@ -105,10 +105,10 @@ def get_total_nat_translations(session, os_type, seed_hostname):
 def get_total_tcp_nat_translations(session, os_type, seed_hostname):
     function_logger = logger.getChild("%s.%s.%s" % (inspect.stack()[2][3], inspect.stack()[1][3], inspect.stack()[0][3]))
     if os_type == "IOS-XE":
-        active_nat_stats_raw = run_command(session, "sho ip nat translations tcp total", 2)
+        active_nat_stats_raw = run_command(session, "sho ip nat translations tcp total", 3)
         active_nat_stats = active_nat_stats_raw.splitlines()[-3].split(" ")[4]
     elif os_type == "IOS":
-        active_nat_stats_raw = run_command(session, "sho ip nat translations tcp | count tcp", 2)
+        active_nat_stats_raw = run_command(session, "sho ip nat translations tcp | count tcp", 3)
         active_nat_stats = active_nat_stats_raw.splitlines()[-2].split(" ")[7]
     else:
         function_logger.warning(seed_hostname + " ########## OS Not Supported for Active_NAT_TCP ##########")
@@ -121,10 +121,10 @@ def get_total_tcp_nat_translations(session, os_type, seed_hostname):
 def get_total_udp_nat_translations(session, os_type, seed_hostname):
     function_logger = logger.getChild("%s.%s.%s" % (inspect.stack()[2][3], inspect.stack()[1][3], inspect.stack()[0][3]))
     if os_type == "IOS-XE":
-        active_nat_stats_raw = run_command(session, "sho ip nat translations udp total", 2)
+        active_nat_stats_raw = run_command(session, "sho ip nat translations udp total", 3)
         active_nat_stats = active_nat_stats_raw.splitlines()[-3].split(" ")[4]
     elif os_type == "IOS":
-        active_nat_stats_raw = run_command(session, "sho ip nat translations udp | count udp", 2)
+        active_nat_stats_raw = run_command(session, "sho ip nat translations udp | count udp", 3)
         active_nat_stats = active_nat_stats_raw.splitlines()[-2].split(" ")[7]
     else:
         function_logger.warning(seed_hostname + " ########## OS Not Supported for Active_NAT_UDP ##########")
@@ -137,10 +137,10 @@ def get_total_udp_nat_translations(session, os_type, seed_hostname):
 def get_total_icmp_nat_translations(session, os_type, seed_hostname):
     function_logger = logger.getChild("%s.%s.%s" % (inspect.stack()[2][3], inspect.stack()[1][3], inspect.stack()[0][3]))
     if os_type == "IOS-XE":
-        active_nat_stats_raw = run_command(session, "sho ip nat translations icmp total", 2)
+        active_nat_stats_raw = run_command(session, "sho ip nat translations icmp total", 3)
         active_nat_stats = active_nat_stats_raw.splitlines()[-3].split(" ")[4]
     elif os_type == "IOS":
-        active_nat_stats_raw = run_command(session, "sho ip nat translations icmp | count icmp", 2)
+        active_nat_stats_raw = run_command(session, "sho ip nat translations icmp | count icmp", 3)
         active_nat_stats = active_nat_stats_raw.splitlines()[-2].split(" ")[7]
     else:
         function_logger.warning(seed_hostname + " ########## OS Not Supported for Active_NAT_ICMP ##########")
@@ -331,7 +331,7 @@ def login_to_host_combined(seed_hostname, seed_username, seed_password, device_O
         function_logger.debug(seed_hostname + " Invoking Shell")
         crawler_connected = crawler_connection_pre.get_transport().open_session()
         crawler_connected.invoke_shell()
-        run_command(crawler_connected, "terminal length 0", 1)
+        run_command(crawler_connected, "terminal length 0", 3)
         nat_trans_total = get_total_nat_translations(crawler_connected, device_OS, seed_hostname)
         nat_trans_icmp = get_total_icmp_nat_translations(crawler_connected, device_OS, seed_hostname)
         nat_trans_tcp = get_total_tcp_nat_translations(crawler_connected, device_OS, seed_hostname)
@@ -344,7 +344,7 @@ def login_to_host_combined(seed_hostname, seed_username, seed_password, device_O
             results += 'NAT_Active_NAT_ICMP{host="%s"} %s\n' % (seed_hostname, str(nat_trans_icmp))
             results += 'NAT_Active_NAT_TCP{host="%s"} %s\n' % (seed_hostname, str(nat_trans_tcp))
             results += 'NAT_Active_NAT_UDP{host="%s"} %s\n' % (seed_hostname, str(nat_trans_udp))
-        qos_output_raw = run_command(crawler_connected, "sho policy-map interface output | i pkts|no-buffer", 2)
+        qos_output_raw = run_command(crawler_connected, "sho policy-map interface output | i pkts|no-buffer", 3)
         qos_pla_pkts = int(qos_output_raw.splitlines()[-12].split(" ")[-1].split("/")[0])
         qos_pla_byte = int(qos_output_raw.splitlines()[-12].split(" ")[-1].split("/")[1])
         qos_pla_drop = int(qos_output_raw.splitlines()[-13].split("/")[-2])
