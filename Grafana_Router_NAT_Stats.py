@@ -98,7 +98,7 @@ def get_total_nat_translations(session, os_type, seed_hostname):
         return "-1"
     function_logger.debug(seed_hostname + "raw nat output " + active_nat_stats_raw)
     active_nat_stats = active_nat_stats_raw.splitlines()[-2].split(" ")[3]
-    function_logger.info(seed_hostname + " active_nat_stats " + active_nat_stats)
+    function_logger.debug(seed_hostname + " active_nat_stats " + active_nat_stats)
     return str(active_nat_stats)
 
 
@@ -588,8 +588,8 @@ def router_stats_combined():
         for host_response in influx_upload:
             for each in host_response.splitlines():
                 to_send += each + " " + timestamp_string + "\n"
-        function_logger.info("to_send")
-        function_logger.info(to_send)
+        # function_logger.info("to_send")
+        # function_logger.info(to_send)
         if not historical_upload == "":
             function_logger.debug("adding history to upload")
             to_send += historical_upload
@@ -668,15 +668,15 @@ def update_influx(raw_string, timestamp=None):
             function_logger.error("update_influx - FAILED after 5 attempts. attempt_error_array: " + str(attempt_error_array))
             return False
         else:
-            function_logger.debug("update_influx - " + "string for influx is " + str(string_to_upload))
-            function_logger.debug("update_influx - " + "influx status code is  " + str(upload_to_influx_sessions_response.status_code))
-            function_logger.debug("update_influx - " + "influx response is code is " + str(upload_to_influx_sessions_response.text[0:1000]))
+            function_logger.debug("string for influx is %s" % str(string_to_upload))
+            function_logger.debug("influx status code is %s" % str(upload_to_influx_sessions_response.status_code))
+            function_logger.debug("influx response is code is %s" % str(upload_to_influx_sessions_response.text[0:1000]))
             return True
     except Exception as e:
-        function_logger.error("update_influx - something went bad sending to InfluxDB")
-        function_logger.error("update_influx - Unexpected error:" + str(sys.exc_info()[0]))
-        function_logger.error("update_influx - Unexpected error:" + str(e))
-        function_logger.error("update_influx - TRACEBACK=" + str(traceback.format_exc()))
+        function_logger.error("something went bad sending to InfluxDB")
+        function_logger.error("Unexpected error:%s" % str(sys.exc_info()[0]))
+        function_logger.error("Unexpected error:%s" % str(e))
+        function_logger.error("TRACEBACK=%s" % str(traceback.format_exc()))
     return False
 
 
