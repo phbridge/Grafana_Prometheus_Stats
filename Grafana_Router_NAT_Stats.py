@@ -238,11 +238,11 @@ def login_to_host_nat(seed_hostname, seed_username, seed_password, device_OS, in
             if nat_trans_total is not None:
                 append_this += 'total=%s,' % str(nat_trans_total)
             if nat_trans_icmp is not None:
-                append_this += 'icmp=%s' % str(nat_trans_icmp)
+                append_this += 'icmp=%s,' % str(nat_trans_icmp)
             if nat_trans_tcp is not None:
-                append_this += 'tcp=%s' % str(nat_trans_tcp)
+                append_this += 'tcp=%s,' % str(nat_trans_tcp)
             if nat_trans_udp is not None:
-                append_this += 'udp=%s' % str(nat_trans_udp)
+                append_this += 'udp=%s,' % str(nat_trans_udp)
             results += 'NAT_Translations,host=%s%s \n' % \
                        (seed_hostname, append_this[:-1])
         else:
@@ -418,11 +418,11 @@ def login_to_host_combined(seed_hostname, seed_username, seed_password, device_O
             if nat_trans_total is not None:
                 append_this += 'total=%s,' % str(nat_trans_total)
             if nat_trans_icmp is not None:
-                append_this += 'icmp=%s' % str(nat_trans_icmp)
+                append_this += 'icmp=%s,' % str(nat_trans_icmp)
             if nat_trans_tcp is not None:
-                append_this += 'tcp=%s' % str(nat_trans_tcp)
+                append_this += 'tcp=%s,' % str(nat_trans_tcp)
             if nat_trans_udp is not None:
-                append_this += 'udp=%s' % str(nat_trans_udp)
+                append_this += 'udp=%s,' % str(nat_trans_udp)
             results += 'NAT_Translations,host=%s%s \n' % \
                        (seed_hostname, append_this[:-1])
         else:
