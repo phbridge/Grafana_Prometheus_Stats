@@ -96,7 +96,7 @@ def get_total_nat_translations(session, os_type, seed_hostname):
             active_nat_stats_raw = run_command(session, "sho ip nat statistics | i Total active translations", 3)
         else:
             function_logger.warning(seed_hostname + " ########## OS Not Supported for Active_NAT_Total ##########")
-            return "-1"
+            return None
         function_logger.debug(seed_hostname + "raw nat output " + active_nat_stats_raw)
         active_nat_stats = active_nat_stats_raw.splitlines()[-2].split(" ")[3]
         function_logger.debug(seed_hostname + " active_nat_stats " + active_nat_stats)
@@ -104,19 +104,18 @@ def get_total_nat_translations(session, os_type, seed_hostname):
     except IndexError:
         function_logger.warning("Index Error HOST=%s ##########" % seed_hostname)
         function_logger.warning("raw_output was %s" % str(active_nat_stats_raw))
-        return "-1"
+        return None
     except ValueError:
         function_logger.warning("Value Error HOST=%s ##########" % seed_hostname)
         function_logger.warning("raw_output was %s" % str(active_nat_stats_raw))
-        return "-1"
+        return None
     except Exception as e:
         function_logger.error("something went collecting data from host")
         function_logger.error("Unknown Error %s HOST=%s ##########" % (str(e), seed_hostname))
         function_logger.error("Unexpected error:%s" % str(sys.exc_info()[0]))
         function_logger.error("Unexpected error:%s" % str(e))
         function_logger.error("TRACEBACK=%s" % str(traceback.format_exc()))
-        return "-1"
-
+        return None
 
 
 def get_total_tcp_nat_translations(session, os_type, seed_hostname):
@@ -130,25 +129,25 @@ def get_total_tcp_nat_translations(session, os_type, seed_hostname):
             active_nat_stats = active_nat_stats_raw.splitlines()[-2].split(" ")[7]
         else:
             function_logger.warning(seed_hostname + " ########## OS Not Supported for Active_NAT_TCP ##########")
-            return "-1"
+            return None
         function_logger.debug(seed_hostname + "raw nat output " + active_nat_stats_raw)
         function_logger.debug(seed_hostname + " active_nat_tcp_stats " + active_nat_stats)
         return str(active_nat_stats)
     except IndexError:
         function_logger.warning("Index Error HOST=%s ##########" % seed_hostname)
         function_logger.warning("raw_output was %s" % str(active_nat_stats_raw))
-        return "-1"
+        return None
     except ValueError:
         function_logger.warning("Value Error HOST=%s ##########" % seed_hostname)
         function_logger.warning("raw_output was %s" % str(active_nat_stats_raw))
-        return "-1"
+        return None
     except Exception as e:
         function_logger.error("something went collecting data from host")
         function_logger.error("Unknown Error %s HOST=%s ##########" % (str(e), seed_hostname))
         function_logger.error("Unexpected error:%s" % str(sys.exc_info()[0]))
         function_logger.error("Unexpected error:%s" % str(e))
         function_logger.error("TRACEBACK=%s" % str(traceback.format_exc()))
-        return "-1"
+        return None
 
 
 def get_total_udp_nat_translations(session, os_type, seed_hostname):
@@ -162,25 +161,25 @@ def get_total_udp_nat_translations(session, os_type, seed_hostname):
             active_nat_stats = active_nat_stats_raw.splitlines()[-2].split(" ")[7]
         else:
             function_logger.warning(seed_hostname + " ########## OS Not Supported for Active_NAT_UDP ##########")
-            return "-1"
+            return None
         function_logger.debug(seed_hostname + "raw nat output " + active_nat_stats_raw)
         function_logger.debug(seed_hostname + " active_nat_tcp_stats " + active_nat_stats)
         return str(active_nat_stats)
     except IndexError:
         function_logger.warning("Index Error HOST=%s ##########" % seed_hostname)
         function_logger.warning("raw_output was %s" % str(active_nat_stats_raw))
-        return "-1"
+        return None
     except ValueError:
         function_logger.warning("Value Error HOST=%s ##########" % seed_hostname)
         function_logger.warning("raw_output was %s" % str(active_nat_stats_raw))
-        return "-1"
+        return None
     except Exception as e:
         function_logger.error("something went collecting data from host")
         function_logger.error("Unknown Error %s HOST=%s ##########" % (str(e), seed_hostname))
         function_logger.error("Unexpected error:%s" % str(sys.exc_info()[0]))
         function_logger.error("Unexpected error:%s" % str(e))
         function_logger.error("TRACEBACK=%s" % str(traceback.format_exc()))
-        return "-1"
+        return None
 
 
 def get_total_icmp_nat_translations(session, os_type, seed_hostname):
@@ -194,25 +193,25 @@ def get_total_icmp_nat_translations(session, os_type, seed_hostname):
             active_nat_stats = active_nat_stats_raw.splitlines()[-2].split(" ")[7]
         else:
             function_logger.warning(seed_hostname + " ########## OS Not Supported for Active_NAT_ICMP ##########")
-            return "-1"
+            return None
         function_logger.debug(seed_hostname + "raw nat output " + active_nat_stats_raw)
         function_logger.debug(seed_hostname + " active_nat_tcp_stats " + active_nat_stats)
         return str(active_nat_stats)
     except IndexError:
         function_logger.warning("Index Error HOST=%s ##########" % seed_hostname)
         function_logger.warning("raw_output was %s" % str(active_nat_stats_raw))
-        return "-1"
+        return None
     except ValueError:
         function_logger.warning("Value Error HOST=%s ##########" % seed_hostname)
         function_logger.warning("raw_output was %s" % str(active_nat_stats_raw))
-        return "-1"
+        return None
     except Exception as e:
         function_logger.error("something went collecting data from host")
         function_logger.error("Unknown Error %s HOST=%s ##########" % (str(e), seed_hostname))
         function_logger.error("Unexpected error:%s" % str(sys.exc_info()[0]))
         function_logger.error("Unexpected error:%s" % str(e))
         function_logger.error("TRACEBACK=%s" % str(traceback.format_exc()))
-        return "-1"
+        return None
 
 
 def login_to_host_nat(seed_hostname, seed_username, seed_password, device_OS, influx=False):
@@ -235,13 +234,26 @@ def login_to_host_nat(seed_hostname, seed_username, seed_password, device_OS, in
         crawler_connected.close()
         crawler_connection_pre.close()
         if influx:
-            results += 'NAT_Translations,host=%s total=%s,icmp=%s,tcp=%s,udp=%s \n' % \
-                       (seed_hostname, nat_trans_total, nat_trans_icmp, nat_trans_tcp, nat_trans_udp)
+            append_this = " "
+            if nat_trans_total is not None:
+                append_this += 'total=%s,' % str(nat_trans_total)
+            if nat_trans_icmp is not None:
+                append_this += 'icmp=%s' % str(nat_trans_icmp)
+            if nat_trans_tcp is not None:
+                append_this += 'tcp=%s' % str(nat_trans_tcp)
+            if nat_trans_udp is not None:
+                append_this += 'udp=%s' % str(nat_trans_udp)
+            results += 'NAT_Translations,host=%s%s \n' % \
+                       (seed_hostname, append_this[:-1])
         else:
-            results += 'NAT_Active_NAT_Total{host="%s"} %s\n' % (seed_hostname, str(nat_trans_total))
-            results += 'NAT_Active_NAT_ICMP{host="%s"} %s\n' % (seed_hostname, str(nat_trans_icmp))
-            results += 'NAT_Active_NAT_TCP{host="%s"} %s\n' % (seed_hostname, str(nat_trans_tcp))
-            results += 'NAT_Active_NAT_UDP{host="%s"} %s\n' % (seed_hostname, str(nat_trans_udp))
+            if nat_trans_total is not None:
+                results += 'NAT_Active_NAT_Total{host="%s"} %s\n' % (seed_hostname, str(nat_trans_total))
+            if nat_trans_icmp is not None:
+                results += 'NAT_Active_NAT_ICMP{host="%s"} %s\n' % (seed_hostname, str(nat_trans_icmp))
+            if nat_trans_tcp is not None:
+                results += 'NAT_Active_NAT_TCP{host="%s"} %s\n' % (seed_hostname, str(nat_trans_tcp))
+            if nat_trans_udp is not None:
+                results += 'NAT_Active_NAT_UDP{host="%s"} %s\n' % (seed_hostname, str(nat_trans_udp))
         return results
     except paramiko.AuthenticationException:
         function_logger.warning("Auth Error HOST=%s" % seed_hostname)
@@ -402,13 +414,26 @@ def login_to_host_combined(seed_hostname, seed_username, seed_password, device_O
         nat_trans_tcp = get_total_tcp_nat_translations(crawler_connected, device_OS, seed_hostname)
         nat_trans_udp = get_total_udp_nat_translations(crawler_connected, device_OS, seed_hostname)
         if influx:
-            results += 'NAT_Translations,host=%s total=%s,icmp=%s,tcp=%s,udp=%s \n' % \
-                       (seed_hostname, nat_trans_total, nat_trans_icmp, nat_trans_tcp, nat_trans_udp)
+            append_this = " "
+            if nat_trans_total is not None:
+                append_this += 'total=%s,' % str(nat_trans_total)
+            if nat_trans_icmp is not None:
+                append_this += 'icmp=%s' % str(nat_trans_icmp)
+            if nat_trans_tcp is not None:
+                append_this += 'tcp=%s' % str(nat_trans_tcp)
+            if nat_trans_udp is not None:
+                append_this += 'udp=%s' % str(nat_trans_udp)
+            results += 'NAT_Translations,host=%s%s \n' % \
+                       (seed_hostname, append_this[:-1])
         else:
-            results += 'NAT_Active_NAT_Total{host="%s"} %s\n' % (seed_hostname, str(nat_trans_total))
-            results += 'NAT_Active_NAT_ICMP{host="%s"} %s\n' % (seed_hostname, str(nat_trans_icmp))
-            results += 'NAT_Active_NAT_TCP{host="%s"} %s\n' % (seed_hostname, str(nat_trans_tcp))
-            results += 'NAT_Active_NAT_UDP{host="%s"} %s\n' % (seed_hostname, str(nat_trans_udp))
+            if nat_trans_total is not None:
+                results += 'NAT_Active_NAT_Total{host="%s"} %s\n' % (seed_hostname, str(nat_trans_total))
+            if nat_trans_icmp is not None:
+                results += 'NAT_Active_NAT_ICMP{host="%s"} %s\n' % (seed_hostname, str(nat_trans_icmp))
+            if nat_trans_tcp is not None:
+                results += 'NAT_Active_NAT_TCP{host="%s"} %s\n' % (seed_hostname, str(nat_trans_tcp))
+            if nat_trans_udp is not None:
+                results += 'NAT_Active_NAT_UDP{host="%s"} %s\n' % (seed_hostname, str(nat_trans_udp))
         qos_output_raw = run_command(crawler_connected, "sho policy-map interface output | i pkts|no-buffer", 3)
         qos_pla_pkts = int(qos_output_raw.splitlines()[-12].split(" ")[-1].split("/")[0])
         qos_pla_byte = int(qos_output_raw.splitlines()[-12].split(" ")[-1].split("/")[1])
@@ -665,14 +690,13 @@ def router_stats_combined():
         for host_response in influx_upload:
             for each in host_response.splitlines():
                 to_send += each + " " + timestamp_string + "\n"
-        # function_logger.info("to_send")
-        # function_logger.info(to_send)
         if not historical_upload == "":
             function_logger.debug("adding history to upload")
             to_send += historical_upload
         if update_influx(to_send):
             historical_upload = ""
         else:
+            historical_upload = ""
             function_logger.debug("adding to history")
             historical_upload += to_send
         time_to_sleep = (future - datetime.now()).seconds
