@@ -537,11 +537,11 @@ def login_to_host_combined(seed_hostname, seed_username, seed_password, device_O
     except IndexError:
         function_logger.warning("Index Error HOST=%s ##########" % seed_hostname)
         function_logger.warning("raw_output was %s" % str(qos_output_raw))
-        return "-1"
+        return results
     except ValueError:
         function_logger.warning("Value Error HOST=%s ##########" % seed_hostname)
         function_logger.warning("raw_output was %s" % str(qos_output_raw))
-        return "-1"
+        return results
     except paramiko.AuthenticationException:
         function_logger.warning("Auth Error HOST=%s" % seed_hostname)
         return results
