@@ -696,9 +696,13 @@ def router_stats_combined():
         if update_influx(to_send):
             historical_upload = ""
         else:
+            max_lines = 100
+            line_number = 0
             historical_upload = ""
-            function_logger.debug("adding to history")
-            historical_upload += to_send
+            for line in to_send.splitlines():
+                if line_number < max_lines:
+                    historical_upload += line + "\n"
+                    line_number += 1
         time_to_sleep = (future - datetime.now()).seconds
         if 30 > time_to_sleep > 0:
             THREAD_TO_BREAK.wait(time_to_sleep)
