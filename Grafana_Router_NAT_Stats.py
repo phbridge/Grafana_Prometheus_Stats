@@ -400,6 +400,15 @@ def login_to_host_combined(seed_hostname, seed_username, seed_password, device_O
     function_logger = logger.getChild("%s.%s.%s" % (inspect.stack()[2][3], inspect.stack()[1][3], inspect.stack()[0][3]))
     crawler_connection_pre = paramiko.SSHClient()
     crawler_connection_pre.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+
+    class SSHTimeout(Exception):
+        pass
+
+    def signal_handler(sig, frame):
+        raise SSHTimeout
+
+    signal.signal(signal.SIGALRM, signal_handler)
+    signal.alarm(20)
     results = ""
     try:
         function_logger.debug(seed_hostname + " Starting connection")
@@ -550,6 +559,9 @@ def login_to_host_combined(seed_hostname, seed_username, seed_password, device_O
         return results
     except socket.error:
         function_logger.warning("Socket Error HOST=%s" % seed_hostname)
+        return results
+    except SSHTimeout:
+        function_logger.warning("SSHTimeout error HOST=%s" % seed_hostname)
         return results
     except Exception as e:
         function_logger.error("something went bad collecting from host")
