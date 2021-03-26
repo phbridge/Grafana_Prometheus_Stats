@@ -398,7 +398,7 @@ def login_to_host_qos(seed_hostname, seed_username, seed_password, device_OS, in
 
 def login_to_host_combined(seed_hostname, seed_username, seed_password, device_OS, influx=False):
     function_logger = logger.getChild("%s.%s.%s" % (inspect.stack()[2][3], inspect.stack()[1][3], inspect.stack()[0][3]))
-    function_logger.critical("starting on host=%s" % seed_hostname)
+    function_logger.info("starting on host=%s" % seed_hostname)
     crawler_connection_pre = paramiko.SSHClient()
     crawler_connection_pre.set_missing_host_key_policy(paramiko.AutoAddPolicy())
 
@@ -406,16 +406,16 @@ def login_to_host_combined(seed_hostname, seed_username, seed_password, device_O
         pass
 
     def signal_handler(sig, frame):
-        function_logger.critical("SIGALRM")
+        function_logger.warning("SIGALRM on host=%s" % seed_hostname)
         raise SSHTimeout
 
     def exit_handler(sig, frame):
-        function_logger.critical("SIGTERM")
+        function_logger.info("SIGTERM")
         raise Exception
 
     signal.signal(signal.SIGALRM, signal_handler)
     signal.signal(signal.SIGTERM, exit_handler)
-    signal.alarm(60)
+    signal.alarm(25)
     results = ""
     try:
         function_logger.debug(seed_hostname + " Starting connection")
@@ -561,15 +561,15 @@ def login_to_host_combined(seed_hostname, seed_username, seed_password, device_O
         function_logger.warning("SSH Error HOST=%s" % seed_hostname)
     except socket.error:
         function_logger.warning("Socket Error HOST=%s" % seed_hostname)
-    # except SSHTimeout:
-    #     function_logger.warning("SSHTimeout error HOST=%s" % seed_hostname)
+    except SSHTimeout:
+        function_logger.warning("SSHTimeout error HOST=%s" % seed_hostname)
     except Exception as e:
         function_logger.error("something went bad collecting from host")
         function_logger.error("Unknown Error %s HOST=%s ##########" % (str(e), seed_hostname))
         function_logger.error("Unexpected error:%s" % str(sys.exc_info()[0]))
         function_logger.error("Unexpected error:%s" % str(e))
         function_logger.error("TRACEBACK=%s" % str(traceback.format_exc()))
-    function_logger.critical("finishing on host=%s" % seed_hostname)
+    function_logger.info("finishing on host=%s" % seed_hostname)
     return results
 
 
