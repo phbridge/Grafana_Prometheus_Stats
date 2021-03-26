@@ -402,14 +402,14 @@ def login_to_host_combined(seed_hostname, seed_username, seed_password, device_O
     crawler_connection_pre = paramiko.SSHClient()
     crawler_connection_pre.set_missing_host_key_policy(paramiko.AutoAddPolicy())
 
-    class SSHTimeout(Exception):
-        pass
-
-    def signal_handler(sig, frame):
-        raise SSHTimeout
-
-    signal.signal(signal.SIGALRM, signal_handler)
-    signal.alarm(60)
+    # class SSHTimeout(Exception):
+    #     pass
+    #
+    # def signal_handler(sig, frame):
+    #     raise SSHTimeout
+    #
+    # signal.signal(signal.SIGALRM, signal_handler)
+    # signal.alarm(60)
     results = ""
     try:
         function_logger.debug(seed_hostname + " Starting connection")
