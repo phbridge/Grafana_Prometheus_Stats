@@ -678,16 +678,20 @@ def graceful_killer(signal_number, frame):
     function_logger = logger.getChild("%s.%s.%s" % (inspect.stack()[2][3], inspect.stack()[1][3], inspect.stack()[0][3]))
     function_logger.info("Got Kill signal")
     function_logger.info('Received:' + str(signal_number))
-    THREAD_TO_BREAK.set()
-    function_logger.info("set thread to break")
-    if INFLUX_MODE:
-        router_stats_thread.join()
-    function_logger.info("joined all threads")
-    if FLASK_MODE:
-        http_server.stop()
-        function_logger.info("stopped HTTP server")
+    try:
+        THREAD_TO_BREAK.set()
+        function_logger.info("set thread to break")
+        if INFLUX_MODE:
+            router_stats_thread.join()
+        function_logger.info("joined all threads")
+        if FLASK_MODE:
+            http_server.stop()
+            function_logger.info("stopped HTTP server")
+    except Exception as e:
+        function_logger.error("update_influx - Unexpected error:" + str(sys.exc_info()[0]))
+        function_logger.error("update_influx - Unexpected error:" + str(e))
+        function_logger.debug("update_influx - TRACEBACK=" + str(traceback.format_exc()))
     quit()
-
 
 def router_stats_combined():
     function_logger = logger.getChild("%s.%s.%s" % (inspect.stack()[2][3], inspect.stack()[1][3], inspect.stack()[0][3]))
