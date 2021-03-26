@@ -410,7 +410,6 @@ def login_to_host_combined(seed_hostname, seed_username, seed_password, device_O
 
     signal.signal(signal.SIGALRM, signal_handler)
     signal.alarm(60)
-    signal.pthread_kill()
     results = ""
     try:
         function_logger.debug(seed_hostname + " Starting connection")
