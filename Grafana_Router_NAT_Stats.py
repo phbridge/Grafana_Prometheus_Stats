@@ -408,7 +408,7 @@ def login_to_host_combined(seed_hostname, seed_username, seed_password, device_O
         raise SSHTimeout
 
     signal.signal(signal.SIGALRM, signal_handler)
-    signal.alarm(20)
+    signal.alarm(60)
     results = ""
     try:
         function_logger.debug(seed_hostname + " Starting connection")
