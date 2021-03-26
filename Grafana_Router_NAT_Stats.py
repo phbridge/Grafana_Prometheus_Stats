@@ -688,9 +688,9 @@ def graceful_killer(signal_number, frame):
             http_server.stop()
             function_logger.info("stopped HTTP server")
     except Exception as e:
-        function_logger.error("update_influx - Unexpected error:" + str(sys.exc_info()[0]))
-        function_logger.error("update_influx - Unexpected error:" + str(e))
-        function_logger.debug("update_influx - TRACEBACK=" + str(traceback.format_exc()))
+        function_logger.error("Unexpected error:" + str(sys.exc_info()[0]))
+        function_logger.error("Unexpected error:" + str(e))
+        function_logger.debug("TRACEBACK=" + str(traceback.format_exc()))
     quit()
 
 def router_stats_combined():
@@ -753,26 +753,26 @@ def update_influx(raw_string, timestamp=None):
                         function_logger.warning("content=%s" % upload_to_influx_sessions_response.content)
                 except requests.exceptions.ConnectTimeout as e:
                     attempts += 1
-                    function_logger.debug("update_influx - attempted " + str(attempts) + " Failed Connection Timeout")
-                    function_logger.debug("update_influx - Unexpected error:" + str(sys.exc_info()[0]))
-                    function_logger.debug("update_influx - Unexpected error:" + str(e))
-                    function_logger.debug("update_influx - String was:" + str(string_to_upload).splitlines()[0])
-                    function_logger.debug("update_influx - TRACEBACK=" + str(traceback.format_exc()))
+                    function_logger.debug("attempted " + str(attempts) + " Failed Connection Timeout")
+                    function_logger.debug("Unexpected error:" + str(sys.exc_info()[0]))
+                    function_logger.debug("Unexpected error:" + str(e))
+                    function_logger.debug("String was:" + str(string_to_upload).splitlines()[0])
+                    function_logger.debug("TRACEBACK=" + str(traceback.format_exc()))
                     attempt_error_array.append(str(sys.exc_info()[0]))
                 except requests.exceptions.ConnectionError as e:
                     attempts += 1
-                    function_logger.debug("update_influx - attempted " + str(attempts) + " Failed Connection Error")
-                    function_logger.debug("update_influx - Unexpected error:" + str(sys.exc_info()[0]))
-                    function_logger.debug("update_influx - Unexpected error:" + str(e))
-                    function_logger.debug("update_influx - String was:" + str(string_to_upload).splitlines()[0])
-                    function_logger.debug("update_influx - TRACEBACK=" + str(traceback.format_exc()))
+                    function_logger.debug("attempted " + str(attempts) + " Failed Connection Error")
+                    function_logger.debug("Unexpected error:" + str(sys.exc_info()[0]))
+                    function_logger.debug("Unexpected error:" + str(e))
+                    function_logger.debug("String was:" + str(string_to_upload).splitlines()[0])
+                    function_logger.debug("TRACEBACK=" + str(traceback.format_exc()))
                     attempt_error_array.append(str(sys.exc_info()[0]))
                 except Exception as e:
-                    function_logger.error("update_influx - attempted " + str(attempts) + " Failed")
-                    function_logger.error("update_influx - Unexpected error:" + str(sys.exc_info()[0]))
-                    function_logger.error("update_influx - Unexpected error:" + str(e))
-                    function_logger.error("update_influx - String was:" + str(string_to_upload).splitlines()[0])
-                    function_logger.debug("update_influx - TRACEBACK=" + str(traceback.format_exc()))
+                    function_logger.error("attempted " + str(attempts) + " Failed")
+                    function_logger.error("Unexpected error:" + str(sys.exc_info()[0]))
+                    function_logger.error("Unexpected error:" + str(e))
+                    function_logger.error("String was:" + str(string_to_upload).splitlines()[0])
+                    function_logger.debug("TRACEBACK=" + str(traceback.format_exc()))
                     attempt_error_array.append(str(sys.exc_info()[0]))
                     break
             success_array.append(success)
