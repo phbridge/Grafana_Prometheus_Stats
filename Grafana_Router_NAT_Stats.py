@@ -398,6 +398,7 @@ def login_to_host_qos(seed_hostname, seed_username, seed_password, device_OS, in
 
 def login_to_host_combined(seed_hostname, seed_username, seed_password, device_OS, influx=False):
     function_logger = logger.getChild("%s.%s.%s" % (inspect.stack()[2][3], inspect.stack()[1][3], inspect.stack()[0][3]))
+    function_logger.critical("starting on host=%s" % seed_hostname)
     crawler_connection_pre = paramiko.SSHClient()
     crawler_connection_pre.set_missing_host_key_policy(paramiko.AutoAddPolicy())
 
@@ -409,6 +410,7 @@ def login_to_host_combined(seed_hostname, seed_username, seed_password, device_O
 
     signal.signal(signal.SIGALRM, signal_handler)
     signal.alarm(60)
+    signal.pthread_kill()
     results = ""
     try:
         function_logger.debug(seed_hostname + " Starting connection")
@@ -542,34 +544,28 @@ def login_to_host_combined(seed_hostname, seed_username, seed_password, device_O
                         str(qos_dft_pkts), str(qos_dft_byte))
         crawler_connected.close()
         crawler_connection_pre.close()
-        return results
     except IndexError:
         function_logger.warning("Index Error HOST=%s ##########" % seed_hostname)
         function_logger.warning("raw_output was %s" % str(qos_output_raw))
-        return results
     except ValueError:
         function_logger.warning("Value Error HOST=%s ##########" % seed_hostname)
         function_logger.warning("raw_output was %s" % str(qos_output_raw))
-        return results
     except paramiko.AuthenticationException:
         function_logger.warning("Auth Error HOST=%s" % seed_hostname)
-        return results
     except paramiko.SSHException:
         function_logger.warning("SSH Error HOST=%s" % seed_hostname)
-        return results
     except socket.error:
         function_logger.warning("Socket Error HOST=%s" % seed_hostname)
-        return results
     except SSHTimeout:
         function_logger.warning("SSHTimeout error HOST=%s" % seed_hostname)
-        return results
     except Exception as e:
         function_logger.error("something went bad collecting from host")
         function_logger.error("Unknown Error %s HOST=%s ##########" % (str(e), seed_hostname))
         function_logger.error("Unexpected error:%s" % str(sys.exc_info()[0]))
         function_logger.error("Unexpected error:%s" % str(e))
         function_logger.error("TRACEBACK=%s" % str(traceback.format_exc()))
-        return results
+    function_logger.critical("finishing on host=%s" % seed_hostname)
+    return results
 
 
 def process_hosts_in_parallel_combined(influx=False):
@@ -588,6 +584,7 @@ def process_hosts_in_parallel_combined(influx=False):
         hosts.append(host_details)
     with Pool(processes=MAX_THREADS) as process_worker:
         results = process_worker.starmap(login_to_host_combined, hosts)
+    function_logger.info("----------- Done Processing Parallel -----------")
     return results
 
 
