@@ -411,7 +411,7 @@ def login_to_host_combined(seed_hostname, seed_username, seed_password, device_O
 
     def exit_handler(sig, frame):
         function_logger.info("SIGTERM")
-        raise Exception
+        raise Exception("Caught SIGTERM")
 
     signal.signal(signal.SIGALRM, signal_handler)
     signal.signal(signal.SIGTERM, exit_handler)
