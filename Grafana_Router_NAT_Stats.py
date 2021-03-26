@@ -555,8 +555,8 @@ def login_to_host_combined(seed_hostname, seed_username, seed_password, device_O
         function_logger.warning("SSH Error HOST=%s" % seed_hostname)
     except socket.error:
         function_logger.warning("Socket Error HOST=%s" % seed_hostname)
-    except SSHTimeout:
-        function_logger.warning("SSHTimeout error HOST=%s" % seed_hostname)
+    # except SSHTimeout:
+    #     function_logger.warning("SSHTimeout error HOST=%s" % seed_hostname)
     except Exception as e:
         function_logger.error("something went bad collecting from host")
         function_logger.error("Unknown Error %s HOST=%s ##########" % (str(e), seed_hostname))
