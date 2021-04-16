@@ -427,12 +427,12 @@ def login_to_host_combined(seed_hostname, seed_username, seed_password, device_O
     def exit_handler(sig, frame):
         function_logger.info("SIGTERM")
         raise Exception("Caught SIGTERM")
-
-    signal.signal(signal.SIGALRM, signal_handler)
-    signal.signal(signal.SIGTERM, exit_handler)
-    signal.alarm(25)
     results = ""
     try:
+        signal.signal(signal.SIGALRM, signal_handler)
+        signal.signal(signal.SIGTERM, exit_handler)
+        signal.alarm(25)
+
         function_logger.debug(seed_hostname + " Starting connection")
         crawler_connection_pre.connect(hostname=seed_hostname, port=22, username=seed_username, password=seed_password,
                                        look_for_keys=False, allow_agent=False, timeout=10)
