@@ -604,6 +604,7 @@ def process_hosts_in_parallel_combined(influx=False):
         host_details.append(each['username'])
         host_details.append(each['password'])
         host_details.append(each['OS'])
+        host_details.append(each['interfaces'])
         if influx:
             host_details.append(True)
         hosts.append(host_details)
