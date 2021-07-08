@@ -497,7 +497,7 @@ def login_to_host_combined(seed_hostname, seed_username, seed_password, device_O
                            'bro_pks=%s,bro_bytes=%s,bro_drops=%s,' \
                            'tin_pks=%s,tin_bytes=%s,tin_drops=%s,' \
                            'dft_pks=%s,dft_bytes=%s,dft_drops=%s \n' % \
-                           (seed_hostname, each_interface
+                           (seed_hostname, each_interface,
                             str(qos_pla_pkts), str(qos_pla_byte), str(qos_pla_drop),
                             str(qos_gol_pkts), str(qos_gol_byte), str(qos_gol_drop),
                             str(qos_sil_pkts), str(qos_sil_byte), str(qos_sil_drop),
