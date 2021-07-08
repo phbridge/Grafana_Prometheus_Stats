@@ -297,8 +297,10 @@ def login_to_host_qos(seed_hostname, seed_username, seed_password, device_OS, in
         crawler_connected = crawler_connection_pre.get_transport().open_session()
         crawler_connected.invoke_shell()
         run_command(crawler_connected, "terminal length 0", 1)
+
         for each_interface in interfaces:
-            qos_output_raw = run_command(crawler_connected, "sho policy-map interface %s output | i pkts|no-buffer" % each_interface, 1)
+            qos_output_raw = run_command(crawler_connected, "sho policy-map interface %s output | i pkts|no-buffer" % each_interface, 2)
+            function_logger.info("raw_output for host %s interface %s is %s" % (seed_hostname, each_interface, qos_output_raw))
             qos_pla_pkts = int(qos_output_raw.splitlines()[-12].split(" ")[-1].split("/")[0])
             qos_pla_byte = int(qos_output_raw.splitlines()[-12].split(" ")[-1].split("/")[1])
             qos_pla_drop = int(qos_output_raw.splitlines()[-13].split("/")[-2])
@@ -351,7 +353,8 @@ def login_to_host_qos(seed_hostname, seed_username, seed_password, device_OS, in
                 results += 'QoS_DEFAULT_OUT_Pkts{host="%s"} %s\n' % (seed_hostname, str(qos_dft_pkts))
                 results += 'QoS_DEFAULT_OUT_Bytes{host="%s"} %s\n' % (seed_hostname, str(qos_dft_byte))
                 results += 'QoS_DEFAULT_OUT_Drops{host="%s"} %s\n' % (seed_hostname, str(qos_dft_drop))
-            qos_output_raw_raw = run_command(crawler_connected, "sho policy-map interface %s input | i packets" % each_interface, 1)
+            qos_output_raw_raw = run_command(crawler_connected, "sho policy-map interface %s input | i packets" % each_interface, 2)
+            function_logger.info("raw_output for host %s interface %s is %s" % (seed_hostname, each_interface, qos_output_raw_raw))
             for line in qos_output_raw_raw.splitlines():
                 if "        " not in str(line):
                     qos_output_raw += str(line + "\n")
