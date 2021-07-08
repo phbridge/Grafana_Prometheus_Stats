@@ -318,14 +318,14 @@ def login_to_host_qos(seed_hostname, seed_username, seed_password, device_OS, in
             qos_dft_byte = int(qos_output_raw.splitlines()[-2].split(" ")[-1].split("/")[1])
             qos_dft_drop = int(qos_output_raw.splitlines()[-3].split("/")[-3])
             if influx:
-                results += 'QoS_Stats_Egress,host=%s ' \
+                results += 'QoS_Stats_Egress,host=%s,interface=%s ' \
                            'pla_pks=%s,pla_bytes=%s,pla_drops=%s,' \
                            'gol_pks=%s,gol_bytes=%s,gol_drops=%s,' \
                            'sil_pks=%s,sil_bytes=%s,sil_drops=%s,' \
                            'bro_pks=%s,bro_bytes=%s,bro_drops=%s,' \
                            'tin_pks=%s,tin_bytes=%s,tin_drops=%s,' \
                            'dft_pks=%s,dft_bytes=%s,dft_drops=%s \n' % \
-                           (seed_hostname,
+                           (seed_hostname, each_interface,
                             str(qos_pla_pkts), str(qos_pla_byte), str(qos_pla_drop),
                             str(qos_gol_pkts), str(qos_gol_byte), str(qos_gol_drop),
                             str(qos_sil_pkts), str(qos_sil_byte), str(qos_sil_drop),
@@ -381,14 +381,14 @@ def login_to_host_qos(seed_hostname, seed_username, seed_password, device_OS, in
                 results += 'QoS_DEFAULT_IN_Pkts{host="%s"} %s\n' % (seed_hostname, str(qos_dft_pkts))
                 results += 'QoS_DEFAULT_IN_Bytes{host="%s"} %s\n' % (seed_hostname, str(qos_dft_byte))
             else:
-                results += 'QoS_Stats_Ingress,host=%s ' \
+                results += 'QoS_Stats_Ingress,host=%s,interface=%s ' \
                            'pla_pks=%s,pla_bytes=%s,' \
                            'gol_pks=%s,gol_bytes=%s,' \
                            'sil_pks=%s,sil_bytes=%s,' \
                            'bro_pks=%s,bro_bytes=%s,' \
                            'tin_pks=%s,tin_bytes=%s,' \
                            'dft_pks=%s,dft_bytes=%s \n' % \
-                           (seed_hostname,
+                           (seed_hostname, each_interface,
                             str(qos_pla_pkts), str(qos_pla_byte),
                             str(qos_gol_pkts), str(qos_gol_byte),
                             str(qos_sil_pkts), str(qos_sil_byte),
