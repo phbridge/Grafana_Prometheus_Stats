@@ -284,7 +284,7 @@ def login_to_host_nat(seed_hostname, seed_username, seed_password, device_OS, in
         return results
 
 
-def login_to_host_qos(seed_hostname, seed_username, seed_password, device_OS, influx=False):
+def login_to_host_qos(seed_hostname, seed_username, seed_password, device_OS, interfaces, influx=False):
     function_logger = logger.getChild("%s.%s.%s" % (inspect.stack()[2][3], inspect.stack()[1][3], inspect.stack()[0][3]))
     crawler_connection_pre = paramiko.SSHClient()
     crawler_connection_pre.set_missing_host_key_policy(paramiko.AutoAddPolicy())
@@ -297,103 +297,104 @@ def login_to_host_qos(seed_hostname, seed_username, seed_password, device_OS, in
         crawler_connected = crawler_connection_pre.get_transport().open_session()
         crawler_connected.invoke_shell()
         run_command(crawler_connected, "terminal length 0", 1)
-        qos_output_raw = run_command(crawler_connected, "sho policy-map interface output | i pkts|no-buffer", 1)
-        qos_pla_pkts = int(qos_output_raw.splitlines()[-12].split(" ")[-1].split("/")[0])
-        qos_pla_byte = int(qos_output_raw.splitlines()[-12].split(" ")[-1].split("/")[1])
-        qos_pla_drop = int(qos_output_raw.splitlines()[-13].split("/")[-2])
-        qos_gol_pkts = int(qos_output_raw.splitlines()[-10].split(" ")[-1].split("/")[0])
-        qos_gol_byte = int(qos_output_raw.splitlines()[-10].split(" ")[-1].split("/")[1])
-        qos_gol_drop = int(qos_output_raw.splitlines()[-11].split("/")[-3])
-        qos_sil_pkts = int(qos_output_raw.splitlines()[-8].split(" ")[-1].split("/")[0])
-        qos_sil_byte = int(qos_output_raw.splitlines()[-8].split(" ")[-1].split("/")[1])
-        qos_sil_drop = int(qos_output_raw.splitlines()[-9].split("/")[-3])
-        qos_bro_pkts = int(qos_output_raw.splitlines()[-6].split(" ")[-1].split("/")[0])
-        qos_bro_byte = int(qos_output_raw.splitlines()[-6].split(" ")[-1].split("/")[1])
-        qos_bro_drop = int(qos_output_raw.splitlines()[-7].split("/")[-3])
-        qos_tin_pkts = int(qos_output_raw.splitlines()[-4].split(" ")[-1].split("/")[0])
-        qos_tin_byte = int(qos_output_raw.splitlines()[-4].split(" ")[-1].split("/")[1])
-        qos_tin_drop = int(qos_output_raw.splitlines()[-5].split("/")[-3])
-        qos_dft_pkts = int(qos_output_raw.splitlines()[-2].split(" ")[-1].split("/")[0])
-        qos_dft_byte = int(qos_output_raw.splitlines()[-2].split(" ")[-1].split("/")[1])
-        qos_dft_drop = int(qos_output_raw.splitlines()[-3].split("/")[-3])
-        if influx:
-            results += 'QoS_Stats_Egress,host=%s ' \
-                       'pla_pks=%s,pla_bytes=%s,pla_drops=%s,' \
-                       'gol_pks=%s,gol_bytes=%s,gol_drops=%s,' \
-                       'sil_pks=%s,sil_bytes=%s,sil_drops=%s,' \
-                       'bro_pks=%s,bro_bytes=%s,bro_drops=%s,' \
-                       'tin_pks=%s,tin_bytes=%s,tin_drops=%s,' \
-                       'dft_pks=%s,dft_bytes=%s,dft_drops=%s \n' % \
-                       (seed_hostname,
-                        str(qos_pla_pkts), str(qos_pla_byte), str(qos_pla_drop),
-                        str(qos_gol_pkts), str(qos_gol_byte), str(qos_gol_drop),
-                        str(qos_sil_pkts), str(qos_sil_byte), str(qos_sil_drop),
-                        str(qos_bro_pkts), str(qos_bro_byte), str(qos_bro_drop),
-                        str(qos_tin_pkts), str(qos_tin_byte), str(qos_tin_drop),
-                        str(qos_dft_pkts), str(qos_dft_byte), str(qos_dft_drop))
-        else:
-            results += 'QoS_PLAT_OUT_Pkts{host="%s"} %s\n' % (seed_hostname, str(qos_pla_pkts))
-            results += 'QoS_PLAT_OUT_Bytes{host="%s"} %s\n' % (seed_hostname, str(qos_pla_byte))
-            results += 'QoS_PLAT_OUT_Drops{host="%s"} %s\n' % (seed_hostname, str(qos_pla_drop))
-            results += 'QoS_GOLD_OUT_Pkts{host="%s"} %s\n' % (seed_hostname, str(qos_gol_pkts))
-            results += 'QoS_GOLD_OUT_Bytes{host="%s"} %s\n' % (seed_hostname, str(qos_gol_byte))
-            results += 'QoS_GOLD_OUT_Drops{host="%s"} %s\n' % (seed_hostname, str(qos_gol_drop))
-            results += 'QoS_SILVER_OUT_Pkts{host="%s"} %s\n' % (seed_hostname, str(qos_sil_pkts))
-            results += 'QoS_SILVER_OUT_Bytes{host="%s"} %s\n' % (seed_hostname, str(qos_sil_byte))
-            results += 'QoS_SILVER_OUT_Drops{host="%s"} %s\n' % (seed_hostname, str(qos_sil_drop))
-            results += 'QoS_BRONZE_OUT_Pkts{host="%s"} %s\n' % (seed_hostname, str(qos_bro_pkts))
-            results += 'QoS_BRONZE_OUT_Bytes{host="%s"} %s\n' % (seed_hostname, str(qos_bro_byte))
-            results += 'QoS_BRONZE_OUT_Drops{host="%s"} %s\n' % (seed_hostname, str(qos_bro_drop))
-            results += 'QoS_TIN_OUT_Pkts{host="%s"} %s\n' % (seed_hostname, str(qos_tin_pkts))
-            results += 'QoS_TIN_OUT_Bytes{host="%s"} %s\n' % (seed_hostname, str(qos_tin_byte))
-            results += 'QoS_TIN_OUT_Drops{host="%s"} %s\n' % (seed_hostname, str(qos_tin_drop))
-            results += 'QoS_DEFAULT_OUT_Pkts{host="%s"} %s\n' % (seed_hostname, str(qos_dft_pkts))
-            results += 'QoS_DEFAULT_OUT_Bytes{host="%s"} %s\n' % (seed_hostname, str(qos_dft_byte))
-            results += 'QoS_DEFAULT_OUT_Drops{host="%s"} %s\n' % (seed_hostname, str(qos_dft_drop))
-        qos_output_raw_raw = run_command(crawler_connected, "sho policy-map interface input | i packets", 1)
-        for line in qos_output_raw_raw.splitlines():
-            if "        " not in str(line):
-                qos_output_raw += str(line + "\n")
-        qos_pla_pkts = int(qos_output_raw.splitlines()[-7].split(" ")[-4])
-        qos_pla_byte = int(qos_output_raw.splitlines()[-7].split(" ")[-2])
-        qos_gol_pkts = int(qos_output_raw.splitlines()[-6].split(" ")[-4])
-        qos_gol_byte = int(qos_output_raw.splitlines()[-6].split(" ")[-2])
-        qos_sil_pkts = int(qos_output_raw.splitlines()[-5].split(" ")[-4])
-        qos_sil_byte = int(qos_output_raw.splitlines()[-5].split(" ")[-2])
-        qos_bro_pkts = int(qos_output_raw.splitlines()[-4].split(" ")[-4])
-        qos_bro_byte = int(qos_output_raw.splitlines()[-4].split(" ")[-2])
-        qos_tin_pkts = int(qos_output_raw.splitlines()[-3].split(" ")[-4])
-        qos_tin_byte = int(qos_output_raw.splitlines()[-3].split(" ")[-2])
-        qos_dft_pkts = int(qos_output_raw.splitlines()[-2].split(" ")[-4])
-        qos_dft_byte = int(qos_output_raw.splitlines()[-2].split(" ")[-2])
-        if influx is None:
-            results += 'QoS_PLAT_IN_Pkts{host="%s"} %s\n' % (seed_hostname, str(qos_pla_pkts))
-            results += 'QoS_PLAT_IN_Bytes{host="%s"} %s\n' % (seed_hostname, str(qos_pla_byte))
-            results += 'QoS_GOLD_IN_Pkts{host="%s"} %s\n' % (seed_hostname, str(qos_gol_pkts))
-            results += 'QoS_GOLD_IN_Bytes{host="%s"} %s\n' % (seed_hostname, str(qos_gol_byte))
-            results += 'QoS_SILVER_IN_Pkts{host="%s"} %s\n' % (seed_hostname, str(qos_sil_pkts))
-            results += 'QoS_SILVER_IN_Bytes{host="%s"} %s\n' % (seed_hostname, str(qos_sil_byte))
-            results += 'QoS_BRONZE_IN_Pkts{host="%s"} %s\n' % (seed_hostname, str(qos_bro_pkts))
-            results += 'QoS_BRONZE_IN_Bytes{host="%s"} %s\n' % (seed_hostname, str(qos_bro_byte))
-            results += 'QoS_TIN_IN_Pkts{host="%s"} %s\n' % (seed_hostname, str(qos_tin_pkts))
-            results += 'QoS_TIN_IN_Bytes{host="%s"} %s\n' % (seed_hostname, str(qos_tin_byte))
-            results += 'QoS_DEFAULT_IN_Pkts{host="%s"} %s\n' % (seed_hostname, str(qos_dft_pkts))
-            results += 'QoS_DEFAULT_IN_Bytes{host="%s"} %s\n' % (seed_hostname, str(qos_dft_byte))
-        else:
-            results += 'QoS_Stats_Ingress,host=%s ' \
-                       'pla_pks=%s,pla_bytes=%s,' \
-                       'gol_pks=%s,gol_bytes=%s,' \
-                       'sil_pks=%s,sil_bytes=%s,' \
-                       'bro_pks=%s,bro_bytes=%s,' \
-                       'tin_pks=%s,tin_bytes=%s,' \
-                       'dft_pks=%s,dft_bytes=%s \n' % \
-                       (seed_hostname,
-                        str(qos_pla_pkts), str(qos_pla_byte),
-                        str(qos_gol_pkts), str(qos_gol_byte),
-                        str(qos_sil_pkts), str(qos_sil_byte),
-                        str(qos_bro_pkts), str(qos_bro_byte),
-                        str(qos_tin_pkts), str(qos_tin_byte),
-                        str(qos_dft_pkts), str(qos_dft_byte))
+        for each_interface in interfaces:
+            qos_output_raw = run_command(crawler_connected, "sho policy-map interface %s output | i pkts|no-buffer" % each_interface, 1)
+            qos_pla_pkts = int(qos_output_raw.splitlines()[-12].split(" ")[-1].split("/")[0])
+            qos_pla_byte = int(qos_output_raw.splitlines()[-12].split(" ")[-1].split("/")[1])
+            qos_pla_drop = int(qos_output_raw.splitlines()[-13].split("/")[-2])
+            qos_gol_pkts = int(qos_output_raw.splitlines()[-10].split(" ")[-1].split("/")[0])
+            qos_gol_byte = int(qos_output_raw.splitlines()[-10].split(" ")[-1].split("/")[1])
+            qos_gol_drop = int(qos_output_raw.splitlines()[-11].split("/")[-3])
+            qos_sil_pkts = int(qos_output_raw.splitlines()[-8].split(" ")[-1].split("/")[0])
+            qos_sil_byte = int(qos_output_raw.splitlines()[-8].split(" ")[-1].split("/")[1])
+            qos_sil_drop = int(qos_output_raw.splitlines()[-9].split("/")[-3])
+            qos_bro_pkts = int(qos_output_raw.splitlines()[-6].split(" ")[-1].split("/")[0])
+            qos_bro_byte = int(qos_output_raw.splitlines()[-6].split(" ")[-1].split("/")[1])
+            qos_bro_drop = int(qos_output_raw.splitlines()[-7].split("/")[-3])
+            qos_tin_pkts = int(qos_output_raw.splitlines()[-4].split(" ")[-1].split("/")[0])
+            qos_tin_byte = int(qos_output_raw.splitlines()[-4].split(" ")[-1].split("/")[1])
+            qos_tin_drop = int(qos_output_raw.splitlines()[-5].split("/")[-3])
+            qos_dft_pkts = int(qos_output_raw.splitlines()[-2].split(" ")[-1].split("/")[0])
+            qos_dft_byte = int(qos_output_raw.splitlines()[-2].split(" ")[-1].split("/")[1])
+            qos_dft_drop = int(qos_output_raw.splitlines()[-3].split("/")[-3])
+            if influx:
+                results += 'QoS_Stats_Egress,host=%s ' \
+                           'pla_pks=%s,pla_bytes=%s,pla_drops=%s,' \
+                           'gol_pks=%s,gol_bytes=%s,gol_drops=%s,' \
+                           'sil_pks=%s,sil_bytes=%s,sil_drops=%s,' \
+                           'bro_pks=%s,bro_bytes=%s,bro_drops=%s,' \
+                           'tin_pks=%s,tin_bytes=%s,tin_drops=%s,' \
+                           'dft_pks=%s,dft_bytes=%s,dft_drops=%s \n' % \
+                           (seed_hostname,
+                            str(qos_pla_pkts), str(qos_pla_byte), str(qos_pla_drop),
+                            str(qos_gol_pkts), str(qos_gol_byte), str(qos_gol_drop),
+                            str(qos_sil_pkts), str(qos_sil_byte), str(qos_sil_drop),
+                            str(qos_bro_pkts), str(qos_bro_byte), str(qos_bro_drop),
+                            str(qos_tin_pkts), str(qos_tin_byte), str(qos_tin_drop),
+                            str(qos_dft_pkts), str(qos_dft_byte), str(qos_dft_drop))
+            else:
+                results += 'QoS_PLAT_OUT_Pkts{host="%s"} %s\n' % (seed_hostname, str(qos_pla_pkts))
+                results += 'QoS_PLAT_OUT_Bytes{host="%s"} %s\n' % (seed_hostname, str(qos_pla_byte))
+                results += 'QoS_PLAT_OUT_Drops{host="%s"} %s\n' % (seed_hostname, str(qos_pla_drop))
+                results += 'QoS_GOLD_OUT_Pkts{host="%s"} %s\n' % (seed_hostname, str(qos_gol_pkts))
+                results += 'QoS_GOLD_OUT_Bytes{host="%s"} %s\n' % (seed_hostname, str(qos_gol_byte))
+                results += 'QoS_GOLD_OUT_Drops{host="%s"} %s\n' % (seed_hostname, str(qos_gol_drop))
+                results += 'QoS_SILVER_OUT_Pkts{host="%s"} %s\n' % (seed_hostname, str(qos_sil_pkts))
+                results += 'QoS_SILVER_OUT_Bytes{host="%s"} %s\n' % (seed_hostname, str(qos_sil_byte))
+                results += 'QoS_SILVER_OUT_Drops{host="%s"} %s\n' % (seed_hostname, str(qos_sil_drop))
+                results += 'QoS_BRONZE_OUT_Pkts{host="%s"} %s\n' % (seed_hostname, str(qos_bro_pkts))
+                results += 'QoS_BRONZE_OUT_Bytes{host="%s"} %s\n' % (seed_hostname, str(qos_bro_byte))
+                results += 'QoS_BRONZE_OUT_Drops{host="%s"} %s\n' % (seed_hostname, str(qos_bro_drop))
+                results += 'QoS_TIN_OUT_Pkts{host="%s"} %s\n' % (seed_hostname, str(qos_tin_pkts))
+                results += 'QoS_TIN_OUT_Bytes{host="%s"} %s\n' % (seed_hostname, str(qos_tin_byte))
+                results += 'QoS_TIN_OUT_Drops{host="%s"} %s\n' % (seed_hostname, str(qos_tin_drop))
+                results += 'QoS_DEFAULT_OUT_Pkts{host="%s"} %s\n' % (seed_hostname, str(qos_dft_pkts))
+                results += 'QoS_DEFAULT_OUT_Bytes{host="%s"} %s\n' % (seed_hostname, str(qos_dft_byte))
+                results += 'QoS_DEFAULT_OUT_Drops{host="%s"} %s\n' % (seed_hostname, str(qos_dft_drop))
+            qos_output_raw_raw = run_command(crawler_connected, "sho policy-map interface %s input | i packets" % each_interface, 1)
+            for line in qos_output_raw_raw.splitlines():
+                if "        " not in str(line):
+                    qos_output_raw += str(line + "\n")
+            qos_pla_pkts = int(qos_output_raw.splitlines()[-7].split(" ")[-4])
+            qos_pla_byte = int(qos_output_raw.splitlines()[-7].split(" ")[-2])
+            qos_gol_pkts = int(qos_output_raw.splitlines()[-6].split(" ")[-4])
+            qos_gol_byte = int(qos_output_raw.splitlines()[-6].split(" ")[-2])
+            qos_sil_pkts = int(qos_output_raw.splitlines()[-5].split(" ")[-4])
+            qos_sil_byte = int(qos_output_raw.splitlines()[-5].split(" ")[-2])
+            qos_bro_pkts = int(qos_output_raw.splitlines()[-4].split(" ")[-4])
+            qos_bro_byte = int(qos_output_raw.splitlines()[-4].split(" ")[-2])
+            qos_tin_pkts = int(qos_output_raw.splitlines()[-3].split(" ")[-4])
+            qos_tin_byte = int(qos_output_raw.splitlines()[-3].split(" ")[-2])
+            qos_dft_pkts = int(qos_output_raw.splitlines()[-2].split(" ")[-4])
+            qos_dft_byte = int(qos_output_raw.splitlines()[-2].split(" ")[-2])
+            if influx is None:
+                results += 'QoS_PLAT_IN_Pkts{host="%s"} %s\n' % (seed_hostname, str(qos_pla_pkts))
+                results += 'QoS_PLAT_IN_Bytes{host="%s"} %s\n' % (seed_hostname, str(qos_pla_byte))
+                results += 'QoS_GOLD_IN_Pkts{host="%s"} %s\n' % (seed_hostname, str(qos_gol_pkts))
+                results += 'QoS_GOLD_IN_Bytes{host="%s"} %s\n' % (seed_hostname, str(qos_gol_byte))
+                results += 'QoS_SILVER_IN_Pkts{host="%s"} %s\n' % (seed_hostname, str(qos_sil_pkts))
+                results += 'QoS_SILVER_IN_Bytes{host="%s"} %s\n' % (seed_hostname, str(qos_sil_byte))
+                results += 'QoS_BRONZE_IN_Pkts{host="%s"} %s\n' % (seed_hostname, str(qos_bro_pkts))
+                results += 'QoS_BRONZE_IN_Bytes{host="%s"} %s\n' % (seed_hostname, str(qos_bro_byte))
+                results += 'QoS_TIN_IN_Pkts{host="%s"} %s\n' % (seed_hostname, str(qos_tin_pkts))
+                results += 'QoS_TIN_IN_Bytes{host="%s"} %s\n' % (seed_hostname, str(qos_tin_byte))
+                results += 'QoS_DEFAULT_IN_Pkts{host="%s"} %s\n' % (seed_hostname, str(qos_dft_pkts))
+                results += 'QoS_DEFAULT_IN_Bytes{host="%s"} %s\n' % (seed_hostname, str(qos_dft_byte))
+            else:
+                results += 'QoS_Stats_Ingress,host=%s ' \
+                           'pla_pks=%s,pla_bytes=%s,' \
+                           'gol_pks=%s,gol_bytes=%s,' \
+                           'sil_pks=%s,sil_bytes=%s,' \
+                           'bro_pks=%s,bro_bytes=%s,' \
+                           'tin_pks=%s,tin_bytes=%s,' \
+                           'dft_pks=%s,dft_bytes=%s \n' % \
+                           (seed_hostname,
+                            str(qos_pla_pkts), str(qos_pla_byte),
+                            str(qos_gol_pkts), str(qos_gol_byte),
+                            str(qos_sil_pkts), str(qos_sil_byte),
+                            str(qos_bro_pkts), str(qos_bro_byte),
+                            str(qos_tin_pkts), str(qos_tin_byte),
+                            str(qos_dft_pkts), str(qos_dft_byte))
         crawler_connected.close()
         crawler_connection_pre.close()
         return results
@@ -638,6 +639,7 @@ def process_hosts_in_parallel_qos(influx=False):
         host_details.append(each['username'])
         host_details.append(each['password'])
         host_details.append(each['OS'])
+        host_details.append(each['interfaces'])
         hosts.append(host_details)
         if influx:
             host_details.append(True)
