@@ -717,7 +717,6 @@ def login_to_host_combined(seed_hostname, seed_username, seed_password, device_O
             print("switch")
         crawler_connected.close()
         crawler_connection_pre.close()
-        signal.alarm(0)
     except IndexError:
         function_logger.warning("Index Error HOST=%s ##########" % seed_hostname)
         function_logger.warning("raw_output was %s" % str(qos_output_raw))
@@ -738,6 +737,7 @@ def login_to_host_combined(seed_hostname, seed_username, seed_password, device_O
         function_logger.error("Unexpected error:%s" % str(sys.exc_info()[0]))
         function_logger.error("Unexpected error:%s" % str(e))
         function_logger.error("TRACEBACK=%s" % str(traceback.format_exc()))
+    signal.alarm(0)
     function_logger.info("finishing on host=%s" % seed_hostname)
     return results
 
