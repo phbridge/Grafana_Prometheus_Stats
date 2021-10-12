@@ -96,6 +96,7 @@ flask_app = Flask('router_nat_stats')
 
 def run_command(session, command, wait=2):
     output = ""
+    output = session.recv(65535).decode("utf-8")
     session.send(command + "\n")
     time.sleep(wait)       # TODO implement something better than sleep here?
     output = session.recv(65535).decode("utf-8")
@@ -196,7 +197,7 @@ def get_total_v4_v6_split(session, os_type, seed_hostname, interface, influx=Tru
                     results += 'ip_bytes_sent{host="%s"} %s\n' % (seed_hostname, str(ip_bytes_sent))
                     results += 'ip_pkts_rcvd{host="%s"} %s\n' % (seed_hostname, str(ip_pkts_rcvd))
                     results += 'ip_bytes_rcvd{host="%s"} %s\n' % (seed_hostname, str(ip_bytes_rcvd))
-            if len(ipv6_output.splitlines()) > 16:
+            if 22 < len(ipv6_output.splitlines()) > 16:
                 function_logger.info("host=%s ipv6_length=%s" % (seed_hostname, len(ipv6_output.splitlines())))
                 function_logger.info("host=%s %s" % (seed_hostname, ipv6_output.splitlines()[12]))
                 function_logger.info("host=%s %s" % (seed_hostname, ipv6_output.splitlines()[5]))
@@ -219,7 +220,7 @@ def get_total_v4_v6_split(session, os_type, seed_hostname, interface, influx=Tru
                     results += 'ipv6_pkts_rcvd{host="%s"} %s\n' % (seed_hostname, str(ipv6_pkts_rcvd))
                     results += 'ipv6_bytes_rcvd{host="%s"} %s\n' % (seed_hostname, str(ipv6_bytes_rcvd))
         elif os_type == "IOS":
-            if len(ip_output.splitlines()) > 16:
+            if 22 < len(ip_output.splitlines()) > 16:
                 function_logger.info("host=%s ip_length=%s" % (seed_hostname, len(ip_output.splitlines())))
                 function_logger.info("host=%s %s" % (seed_hostname, ip_output.splitlines()[14]))
                 function_logger.info("host=%s %s" % (seed_hostname, ip_output.splitlines()[5]))
@@ -241,7 +242,7 @@ def get_total_v4_v6_split(session, os_type, seed_hostname, interface, influx=Tru
                     results += 'ip_bytes_sent{host="%s"} %s\n' % (seed_hostname, str(ip_bytes_sent))
                     results += 'ip_pkts_rcvd{host="%s"} %s\n' % (seed_hostname, str(ip_pkts_rcvd))
                     results += 'ip_bytes_rcvd{host="%s"} %s\n' % (seed_hostname, str(ip_bytes_rcvd))
-            if len(ipv6_output.splitlines()) > 16:
+            if 22 < len(ipv6_output.splitlines()) > 16:
                 function_logger.info("host=%s ipv6_length=%s" % (seed_hostname, len(ipv6_output.splitlines())))
                 function_logger.info("host=%s %s" % (seed_hostname, ipv6_output.splitlines()[12]))
                 function_logger.info("host=%s %s" % (seed_hostname, ipv6_output.splitlines()[5]))
