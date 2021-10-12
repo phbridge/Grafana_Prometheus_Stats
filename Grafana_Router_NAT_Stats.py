@@ -165,6 +165,38 @@ def get_total_tcp_nat_translations(session, os_type, seed_hostname):
         return None
 
 
+def get_total_v4_v6_split(session, os_type, seed_hostname):
+    function_logger = logger.getChild("%s.%s.%s" % (inspect.stack()[2][3], inspect.stack()[1][3], inspect.stack()[0][3]))
+    try:
+        if os_type == "IOS-XE":
+            active_nat_stats_raw = run_command(session, "sho ip nat translations udp total", 3)
+            active_nat_stats = active_nat_stats_raw.splitlines()[-3].split(" ")[4]
+        elif os_type == "IOS":
+            active_nat_stats_raw = run_command(session, "sho ip nat translations udp | count udp", 3)
+            active_nat_stats = active_nat_stats_raw.splitlines()[-2].split(" ")[7]
+        else:
+            function_logger.warning(seed_hostname + " ########## OS Not Supported for Active_NAT_UDP ##########")
+            return None
+        function_logger.debug(seed_hostname + "raw nat output " + active_nat_stats_raw)
+        function_logger.debug(seed_hostname + " active_nat_tcp_stats " + active_nat_stats)
+        return str(active_nat_stats)
+    except IndexError:
+        function_logger.warning("Index Error HOST=%s ##########" % seed_hostname)
+        function_logger.warning("raw_output was %s" % str(active_nat_stats_raw))
+        return None
+    except ValueError:
+        function_logger.warning("Value Error HOST=%s ##########" % seed_hostname)
+        function_logger.warning("raw_output was %s" % str(active_nat_stats_raw))
+        return None
+    except Exception as e:
+        function_logger.error("something went collecting data from host")
+        function_logger.error("Unknown Error %s HOST=%s ##########" % (str(e), seed_hostname))
+        function_logger.error("Unexpected error:%s" % str(sys.exc_info()[0]))
+        function_logger.error("Unexpected error:%s" % str(e))
+        function_logger.error("TRACEBACK=%s" % str(traceback.format_exc()))
+        return None
+
+
 def get_total_udp_nat_translations(session, os_type, seed_hostname):
     function_logger = logger.getChild("%s.%s.%s" % (inspect.stack()[2][3], inspect.stack()[1][3], inspect.stack()[0][3]))
     try:
@@ -284,7 +316,7 @@ def login_to_host_nat(seed_hostname, seed_username, seed_password, device_OS, in
         return results
 
 
-def login_to_host_qos(seed_hostname, seed_username, seed_password, device_OS, interfaces, influx=False):
+def login_to_host_qos(seed_hostname, seed_username, seed_password, device_OS, qos_interfaces, influx=False):
     function_logger = logger.getChild("%s.%s.%s" % (inspect.stack()[2][3], inspect.stack()[1][3], inspect.stack()[0][3]))
     crawler_connection_pre = paramiko.SSHClient()
     crawler_connection_pre.set_missing_host_key_policy(paramiko.AutoAddPolicy())
@@ -298,7 +330,7 @@ def login_to_host_qos(seed_hostname, seed_username, seed_password, device_OS, in
         crawler_connected.invoke_shell()
         run_command(crawler_connected, "terminal length 0", 1)
 
-        for each_interface in interfaces:
+        for each_interface in qos_interfaces:
             qos_output_raw = run_command(crawler_connected, "sho policy-map interface %s output | i pkts|no-buffer" % each_interface, 2)
             function_logger.info("raw_output for host %s interface %s is %s" % (seed_hostname, each_interface, qos_output_raw))
             qos_pla_pkts = int(qos_output_raw.splitlines()[-12].split(" ")[-1].split("/")[0])
@@ -415,7 +447,7 @@ def login_to_host_qos(seed_hostname, seed_username, seed_password, device_OS, in
         return results
 
 
-def login_to_host_combined(seed_hostname, seed_username, seed_password, device_OS, interfaces, influx=False):
+def login_to_host_combined(seed_hostname, seed_username, seed_password, device_OS, qos_interfaces, ip_ipv6_interfaces, influx=False, router=True, switch=False):
     function_logger = logger.getChild("%s.%s.%s" % (inspect.stack()[2][3], inspect.stack()[1][3], inspect.stack()[0][3]))
     function_logger.info("starting on host=%s" % seed_hostname)
     crawler_connection_pre = paramiko.SSHClient()
@@ -431,6 +463,7 @@ def login_to_host_combined(seed_hostname, seed_username, seed_password, device_O
     def exit_handler(sig, frame):
         function_logger.info("SIGTERM")
         raise Exception("Caught SIGTERM")
+
     results = ""
     try:
         signal.signal(signal.SIGALRM, signal_handler)
@@ -444,129 +477,173 @@ def login_to_host_combined(seed_hostname, seed_username, seed_password, device_O
         crawler_connected = crawler_connection_pre.get_transport().open_session()
         crawler_connected.invoke_shell()
         run_command(crawler_connected, "terminal length 0", 3)
-        nat_trans_total = get_total_nat_translations(crawler_connected, device_OS, seed_hostname)
-        nat_trans_icmp = get_total_icmp_nat_translations(crawler_connected, device_OS, seed_hostname)
-        nat_trans_tcp = get_total_tcp_nat_translations(crawler_connected, device_OS, seed_hostname)
-        nat_trans_udp = get_total_udp_nat_translations(crawler_connected, device_OS, seed_hostname)
-        if influx:
-            append_this = " "
-            if nat_trans_total is not None:
-                append_this += 'total=%s,' % str(nat_trans_total)
-            if nat_trans_icmp is not None:
-                append_this += 'icmp=%s,' % str(nat_trans_icmp)
-            if nat_trans_tcp is not None:
-                append_this += 'tcp=%s,' % str(nat_trans_tcp)
-            if nat_trans_udp is not None:
-                append_this += 'udp=%s,' % str(nat_trans_udp)
-            results += 'NAT_Translations,host=%s%s \n' % \
-                       (seed_hostname, append_this[:-1])
-        else:
-            if nat_trans_total is not None:
-                results += 'NAT_Active_NAT_Total{host="%s"} %s\n' % (seed_hostname, str(nat_trans_total))
-            if nat_trans_icmp is not None:
-                results += 'NAT_Active_NAT_ICMP{host="%s"} %s\n' % (seed_hostname, str(nat_trans_icmp))
-            if nat_trans_tcp is not None:
-                results += 'NAT_Active_NAT_TCP{host="%s"} %s\n' % (seed_hostname, str(nat_trans_tcp))
-            if nat_trans_udp is not None:
-                results += 'NAT_Active_NAT_UDP{host="%s"} %s\n' % (seed_hostname, str(nat_trans_udp))
-        for each_interface in interfaces:
-            qos_output_raw = run_command(crawler_connected, "sho policy-map interface %s output | i pkts|no-buffer" % each_interface, 3)
-            qos_pla_pkts = int(qos_output_raw.splitlines()[-12].split(" ")[-1].split("/")[0])
-            qos_pla_byte = int(qos_output_raw.splitlines()[-12].split(" ")[-1].split("/")[1])
-            qos_pla_drop = int(qos_output_raw.splitlines()[-13].split("/")[-2])
-            qos_gol_pkts = int(qos_output_raw.splitlines()[-10].split(" ")[-1].split("/")[0])
-            qos_gol_byte = int(qos_output_raw.splitlines()[-10].split(" ")[-1].split("/")[1])
-            qos_gol_drop = int(qos_output_raw.splitlines()[-11].split("/")[-3])
-            qos_sil_pkts = int(qos_output_raw.splitlines()[-8].split(" ")[-1].split("/")[0])
-            qos_sil_byte = int(qos_output_raw.splitlines()[-8].split(" ")[-1].split("/")[1])
-            qos_sil_drop = int(qos_output_raw.splitlines()[-9].split("/")[-3])
-            qos_bro_pkts = int(qos_output_raw.splitlines()[-6].split(" ")[-1].split("/")[0])
-            qos_bro_byte = int(qos_output_raw.splitlines()[-6].split(" ")[-1].split("/")[1])
-            qos_bro_drop = int(qos_output_raw.splitlines()[-7].split("/")[-3])
-            qos_tin_pkts = int(qos_output_raw.splitlines()[-4].split(" ")[-1].split("/")[0])
-            qos_tin_byte = int(qos_output_raw.splitlines()[-4].split(" ")[-1].split("/")[1])
-            qos_tin_drop = int(qos_output_raw.splitlines()[-5].split("/")[-3])
-            qos_dft_pkts = int(qos_output_raw.splitlines()[-2].split(" ")[-1].split("/")[0])
-            qos_dft_byte = int(qos_output_raw.splitlines()[-2].split(" ")[-1].split("/")[1])
-            qos_dft_drop = int(qos_output_raw.splitlines()[-3].split("/")[-3])
+        if router:
+            nat_trans_total = get_total_nat_translations(crawler_connected, device_OS, seed_hostname)
+            nat_trans_icmp = get_total_icmp_nat_translations(crawler_connected, device_OS, seed_hostname)
+            nat_trans_tcp = get_total_tcp_nat_translations(crawler_connected, device_OS, seed_hostname)
+            nat_trans_udp = get_total_udp_nat_translations(crawler_connected, device_OS, seed_hostname)
             if influx:
-                results += 'QoS_Stats_Egress,host=%s,interface=%s ' \
-                           'pla_pks=%s,pla_bytes=%s,pla_drops=%s,' \
-                           'gol_pks=%s,gol_bytes=%s,gol_drops=%s,' \
-                           'sil_pks=%s,sil_bytes=%s,sil_drops=%s,' \
-                           'bro_pks=%s,bro_bytes=%s,bro_drops=%s,' \
-                           'tin_pks=%s,tin_bytes=%s,tin_drops=%s,' \
-                           'dft_pks=%s,dft_bytes=%s,dft_drops=%s \n' % \
-                           (seed_hostname, each_interface,
-                            str(qos_pla_pkts), str(qos_pla_byte), str(qos_pla_drop),
-                            str(qos_gol_pkts), str(qos_gol_byte), str(qos_gol_drop),
-                            str(qos_sil_pkts), str(qos_sil_byte), str(qos_sil_drop),
-                            str(qos_bro_pkts), str(qos_bro_byte), str(qos_bro_drop),
-                            str(qos_tin_pkts), str(qos_tin_byte), str(qos_tin_drop),
-                            str(qos_dft_pkts), str(qos_dft_byte), str(qos_dft_drop))
+                append_this = " "
+                if nat_trans_total is not None:
+                    append_this += 'total=%s,' % str(nat_trans_total)
+                if nat_trans_icmp is not None:
+                    append_this += 'icmp=%s,' % str(nat_trans_icmp)
+                if nat_trans_tcp is not None:
+                    append_this += 'tcp=%s,' % str(nat_trans_tcp)
+                if nat_trans_udp is not None:
+                    append_this += 'udp=%s,' % str(nat_trans_udp)
+                results += 'NAT_Translations,host=%s%s \n' % (seed_hostname, append_this[:-1])
             else:
-                results += 'QoS_PLAT_OUT_Pkts{host="%s"} %s\n' % (seed_hostname, str(qos_pla_pkts))
-                results += 'QoS_PLAT_OUT_Bytes{host="%s"} %s\n' % (seed_hostname, str(qos_pla_byte))
-                results += 'QoS_PLAT_OUT_Drops{host="%s"} %s\n' % (seed_hostname, str(qos_pla_drop))
-                results += 'QoS_GOLD_OUT_Pkts{host="%s"} %s\n' % (seed_hostname, str(qos_gol_pkts))
-                results += 'QoS_GOLD_OUT_Bytes{host="%s"} %s\n' % (seed_hostname, str(qos_gol_byte))
-                results += 'QoS_GOLD_OUT_Drops{host="%s"} %s\n' % (seed_hostname, str(qos_gol_drop))
-                results += 'QoS_SILVER_OUT_Pkts{host="%s"} %s\n' % (seed_hostname, str(qos_sil_pkts))
-                results += 'QoS_SILVER_OUT_Bytes{host="%s"} %s\n' % (seed_hostname, str(qos_sil_byte))
-                results += 'QoS_SILVER_OUT_Drops{host="%s"} %s\n' % (seed_hostname, str(qos_sil_drop))
-                results += 'QoS_BRONZE_OUT_Pkts{host="%s"} %s\n' % (seed_hostname, str(qos_bro_pkts))
-                results += 'QoS_BRONZE_OUT_Bytes{host="%s"} %s\n' % (seed_hostname, str(qos_bro_byte))
-                results += 'QoS_BRONZE_OUT_Drops{host="%s"} %s\n' % (seed_hostname, str(qos_bro_drop))
-                results += 'QoS_TIN_OUT_Pkts{host="%s"} %s\n' % (seed_hostname, str(qos_tin_pkts))
-                results += 'QoS_TIN_OUT_Bytes{host="%s"} %s\n' % (seed_hostname, str(qos_tin_byte))
-                results += 'QoS_TIN_OUT_Drops{host="%s"} %s\n' % (seed_hostname, str(qos_tin_drop))
-                results += 'QoS_DEFAULT_OUT_Pkts{host="%s"} %s\n' % (seed_hostname, str(qos_dft_pkts))
-                results += 'QoS_DEFAULT_OUT_Bytes{host="%s"} %s\n' % (seed_hostname, str(qos_dft_byte))
-                results += 'QoS_DEFAULT_OUT_Drops{host="%s"} %s\n' % (seed_hostname, str(qos_dft_drop))
-            qos_output_raw_raw = run_command(crawler_connected, "sho policy-map interface %s input | i packets" % each_interface, 1)
-            for line in qos_output_raw_raw.splitlines():
-                if "        " not in str(line):
-                    qos_output_raw += str(line + "\n")
-            qos_pla_pkts = int(qos_output_raw.splitlines()[-7].split(" ")[-4])
-            qos_pla_byte = int(qos_output_raw.splitlines()[-7].split(" ")[-2])
-            qos_gol_pkts = int(qos_output_raw.splitlines()[-6].split(" ")[-4])
-            qos_gol_byte = int(qos_output_raw.splitlines()[-6].split(" ")[-2])
-            qos_sil_pkts = int(qos_output_raw.splitlines()[-5].split(" ")[-4])
-            qos_sil_byte = int(qos_output_raw.splitlines()[-5].split(" ")[-2])
-            qos_bro_pkts = int(qos_output_raw.splitlines()[-4].split(" ")[-4])
-            qos_bro_byte = int(qos_output_raw.splitlines()[-4].split(" ")[-2])
-            qos_tin_pkts = int(qos_output_raw.splitlines()[-3].split(" ")[-4])
-            qos_tin_byte = int(qos_output_raw.splitlines()[-3].split(" ")[-2])
-            qos_dft_pkts = int(qos_output_raw.splitlines()[-2].split(" ")[-4])
-            qos_dft_byte = int(qos_output_raw.splitlines()[-2].split(" ")[-2])
-            if influx is None:
-                results += 'QoS_PLAT_IN_Pkts{host="%s"} %s\n' % (seed_hostname, str(qos_pla_pkts))
-                results += 'QoS_PLAT_IN_Bytes{host="%s"} %s\n' % (seed_hostname, str(qos_pla_byte))
-                results += 'QoS_GOLD_IN_Pkts{host="%s"} %s\n' % (seed_hostname, str(qos_gol_pkts))
-                results += 'QoS_GOLD_IN_Bytes{host="%s"} %s\n' % (seed_hostname, str(qos_gol_byte))
-                results += 'QoS_SILVER_IN_Pkts{host="%s"} %s\n' % (seed_hostname, str(qos_sil_pkts))
-                results += 'QoS_SILVER_IN_Bytes{host="%s"} %s\n' % (seed_hostname, str(qos_sil_byte))
-                results += 'QoS_BRONZE_IN_Pkts{host="%s"} %s\n' % (seed_hostname, str(qos_bro_pkts))
-                results += 'QoS_BRONZE_IN_Bytes{host="%s"} %s\n' % (seed_hostname, str(qos_bro_byte))
-                results += 'QoS_TIN_IN_Pkts{host="%s"} %s\n' % (seed_hostname, str(qos_tin_pkts))
-                results += 'QoS_TIN_IN_Bytes{host="%s"} %s\n' % (seed_hostname, str(qos_tin_byte))
-                results += 'QoS_DEFAULT_IN_Pkts{host="%s"} %s\n' % (seed_hostname, str(qos_dft_pkts))
-                results += 'QoS_DEFAULT_IN_Bytes{host="%s"} %s\n' % (seed_hostname, str(qos_dft_byte))
-            else:
-                results += 'QoS_Stats_Ingress,host=%s,interface=%s ' \
-                           'pla_pks=%s,pla_bytes=%s,' \
-                           'gol_pks=%s,gol_bytes=%s,' \
-                           'sil_pks=%s,sil_bytes=%s,' \
-                           'bro_pks=%s,bro_bytes=%s,' \
-                           'tin_pks=%s,tin_bytes=%s,' \
-                           'dft_pks=%s,dft_bytes=%s \n' % \
-                           (seed_hostname, each_interface,
-                            str(qos_pla_pkts), str(qos_pla_byte),
-                            str(qos_gol_pkts), str(qos_gol_byte),
-                            str(qos_sil_pkts), str(qos_sil_byte),
-                            str(qos_bro_pkts), str(qos_bro_byte),
-                            str(qos_tin_pkts), str(qos_tin_byte),
-                            str(qos_dft_pkts), str(qos_dft_byte))
+                if nat_trans_total is not None:
+                    results += 'NAT_Active_NAT_Total{host="%s"} %s\n' % (seed_hostname, str(nat_trans_total))
+                if nat_trans_icmp is not None:
+                    results += 'NAT_Active_NAT_ICMP{host="%s"} %s\n' % (seed_hostname, str(nat_trans_icmp))
+                if nat_trans_tcp is not None:
+                    results += 'NAT_Active_NAT_TCP{host="%s"} %s\n' % (seed_hostname, str(nat_trans_tcp))
+                if nat_trans_udp is not None:
+                    results += 'NAT_Active_NAT_UDP{host="%s"} %s\n' % (seed_hostname, str(nat_trans_udp))
+            for each_interface in qos_interfaces:
+                qos_output_raw = run_command(crawler_connected, "sho policy-map interface %s output | i pkts|no-buffer" % each_interface, 3)
+                qos_pla_pkts = int(qos_output_raw.splitlines()[-12].split(" ")[-1].split("/")[0])
+                qos_pla_byte = int(qos_output_raw.splitlines()[-12].split(" ")[-1].split("/")[1])
+                qos_pla_drop = int(qos_output_raw.splitlines()[-13].split("/")[-2])
+                qos_gol_pkts = int(qos_output_raw.splitlines()[-10].split(" ")[-1].split("/")[0])
+                qos_gol_byte = int(qos_output_raw.splitlines()[-10].split(" ")[-1].split("/")[1])
+                qos_gol_drop = int(qos_output_raw.splitlines()[-11].split("/")[-3])
+                qos_sil_pkts = int(qos_output_raw.splitlines()[-8].split(" ")[-1].split("/")[0])
+                qos_sil_byte = int(qos_output_raw.splitlines()[-8].split(" ")[-1].split("/")[1])
+                qos_sil_drop = int(qos_output_raw.splitlines()[-9].split("/")[-3])
+                qos_bro_pkts = int(qos_output_raw.splitlines()[-6].split(" ")[-1].split("/")[0])
+                qos_bro_byte = int(qos_output_raw.splitlines()[-6].split(" ")[-1].split("/")[1])
+                qos_bro_drop = int(qos_output_raw.splitlines()[-7].split("/")[-3])
+                qos_tin_pkts = int(qos_output_raw.splitlines()[-4].split(" ")[-1].split("/")[0])
+                qos_tin_byte = int(qos_output_raw.splitlines()[-4].split(" ")[-1].split("/")[1])
+                qos_tin_drop = int(qos_output_raw.splitlines()[-5].split("/")[-3])
+                qos_dft_pkts = int(qos_output_raw.splitlines()[-2].split(" ")[-1].split("/")[0])
+                qos_dft_byte = int(qos_output_raw.splitlines()[-2].split(" ")[-1].split("/")[1])
+                qos_dft_drop = int(qos_output_raw.splitlines()[-3].split("/")[-3])
+                if influx:
+                    results += 'QoS_Stats_Egress,host=%s,interface=%s ' \
+                               'pla_pks=%s,pla_bytes=%s,pla_drops=%s,' \
+                               'gol_pks=%s,gol_bytes=%s,gol_drops=%s,' \
+                               'sil_pks=%s,sil_bytes=%s,sil_drops=%s,' \
+                               'bro_pks=%s,bro_bytes=%s,bro_drops=%s,' \
+                               'tin_pks=%s,tin_bytes=%s,tin_drops=%s,' \
+                               'dft_pks=%s,dft_bytes=%s,dft_drops=%s \n' % \
+                               (seed_hostname, each_interface,
+                                str(qos_pla_pkts), str(qos_pla_byte), str(qos_pla_drop),
+                                str(qos_gol_pkts), str(qos_gol_byte), str(qos_gol_drop),
+                                str(qos_sil_pkts), str(qos_sil_byte), str(qos_sil_drop),
+                                str(qos_bro_pkts), str(qos_bro_byte), str(qos_bro_drop),
+                                str(qos_tin_pkts), str(qos_tin_byte), str(qos_tin_drop),
+                                str(qos_dft_pkts), str(qos_dft_byte), str(qos_dft_drop))
+                else:
+                    results += 'QoS_PLAT_OUT_Pkts{host="%s"} %s\n' % (seed_hostname, str(qos_pla_pkts))
+                    results += 'QoS_PLAT_OUT_Bytes{host="%s"} %s\n' % (seed_hostname, str(qos_pla_byte))
+                    results += 'QoS_PLAT_OUT_Drops{host="%s"} %s\n' % (seed_hostname, str(qos_pla_drop))
+                    results += 'QoS_GOLD_OUT_Pkts{host="%s"} %s\n' % (seed_hostname, str(qos_gol_pkts))
+                    results += 'QoS_GOLD_OUT_Bytes{host="%s"} %s\n' % (seed_hostname, str(qos_gol_byte))
+                    results += 'QoS_GOLD_OUT_Drops{host="%s"} %s\n' % (seed_hostname, str(qos_gol_drop))
+                    results += 'QoS_SILVER_OUT_Pkts{host="%s"} %s\n' % (seed_hostname, str(qos_sil_pkts))
+                    results += 'QoS_SILVER_OUT_Bytes{host="%s"} %s\n' % (seed_hostname, str(qos_sil_byte))
+                    results += 'QoS_SILVER_OUT_Drops{host="%s"} %s\n' % (seed_hostname, str(qos_sil_drop))
+                    results += 'QoS_BRONZE_OUT_Pkts{host="%s"} %s\n' % (seed_hostname, str(qos_bro_pkts))
+                    results += 'QoS_BRONZE_OUT_Bytes{host="%s"} %s\n' % (seed_hostname, str(qos_bro_byte))
+                    results += 'QoS_BRONZE_OUT_Drops{host="%s"} %s\n' % (seed_hostname, str(qos_bro_drop))
+                    results += 'QoS_TIN_OUT_Pkts{host="%s"} %s\n' % (seed_hostname, str(qos_tin_pkts))
+                    results += 'QoS_TIN_OUT_Bytes{host="%s"} %s\n' % (seed_hostname, str(qos_tin_byte))
+                    results += 'QoS_TIN_OUT_Drops{host="%s"} %s\n' % (seed_hostname, str(qos_tin_drop))
+                    results += 'QoS_DEFAULT_OUT_Pkts{host="%s"} %s\n' % (seed_hostname, str(qos_dft_pkts))
+                    results += 'QoS_DEFAULT_OUT_Bytes{host="%s"} %s\n' % (seed_hostname, str(qos_dft_byte))
+                    results += 'QoS_DEFAULT_OUT_Drops{host="%s"} %s\n' % (seed_hostname, str(qos_dft_drop))
+                qos_output_raw_raw = run_command(crawler_connected, "sho policy-map interface %s input | i packets" % each_interface, 1)
+                for line in qos_output_raw_raw.splitlines():
+                    if "        " not in str(line):
+                        qos_output_raw += str(line + "\n")
+                qos_pla_pkts = int(qos_output_raw.splitlines()[-7].split(" ")[-4])
+                qos_pla_byte = int(qos_output_raw.splitlines()[-7].split(" ")[-2])
+                qos_gol_pkts = int(qos_output_raw.splitlines()[-6].split(" ")[-4])
+                qos_gol_byte = int(qos_output_raw.splitlines()[-6].split(" ")[-2])
+                qos_sil_pkts = int(qos_output_raw.splitlines()[-5].split(" ")[-4])
+                qos_sil_byte = int(qos_output_raw.splitlines()[-5].split(" ")[-2])
+                qos_bro_pkts = int(qos_output_raw.splitlines()[-4].split(" ")[-4])
+                qos_bro_byte = int(qos_output_raw.splitlines()[-4].split(" ")[-2])
+                qos_tin_pkts = int(qos_output_raw.splitlines()[-3].split(" ")[-4])
+                qos_tin_byte = int(qos_output_raw.splitlines()[-3].split(" ")[-2])
+                qos_dft_pkts = int(qos_output_raw.splitlines()[-2].split(" ")[-4])
+                qos_dft_byte = int(qos_output_raw.splitlines()[-2].split(" ")[-2])
+                if influx is None:
+                    results += 'QoS_PLAT_IN_Pkts{host="%s"} %s\n' % (seed_hostname, str(qos_pla_pkts))
+                    results += 'QoS_PLAT_IN_Bytes{host="%s"} %s\n' % (seed_hostname, str(qos_pla_byte))
+                    results += 'QoS_GOLD_IN_Pkts{host="%s"} %s\n' % (seed_hostname, str(qos_gol_pkts))
+                    results += 'QoS_GOLD_IN_Bytes{host="%s"} %s\n' % (seed_hostname, str(qos_gol_byte))
+                    results += 'QoS_SILVER_IN_Pkts{host="%s"} %s\n' % (seed_hostname, str(qos_sil_pkts))
+                    results += 'QoS_SILVER_IN_Bytes{host="%s"} %s\n' % (seed_hostname, str(qos_sil_byte))
+                    results += 'QoS_BRONZE_IN_Pkts{host="%s"} %s\n' % (seed_hostname, str(qos_bro_pkts))
+                    results += 'QoS_BRONZE_IN_Bytes{host="%s"} %s\n' % (seed_hostname, str(qos_bro_byte))
+                    results += 'QoS_TIN_IN_Pkts{host="%s"} %s\n' % (seed_hostname, str(qos_tin_pkts))
+                    results += 'QoS_TIN_IN_Bytes{host="%s"} %s\n' % (seed_hostname, str(qos_tin_byte))
+                    results += 'QoS_DEFAULT_IN_Pkts{host="%s"} %s\n' % (seed_hostname, str(qos_dft_pkts))
+                    results += 'QoS_DEFAULT_IN_Bytes{host="%s"} %s\n' % (seed_hostname, str(qos_dft_byte))
+                else:
+                    results += 'QoS_Stats_Ingress,host=%s,interface=%s ' \
+                               'pla_pks=%s,pla_bytes=%s,' \
+                               'gol_pks=%s,gol_bytes=%s,' \
+                               'sil_pks=%s,sil_bytes=%s,' \
+                               'bro_pks=%s,bro_bytes=%s,' \
+                               'tin_pks=%s,tin_bytes=%s,' \
+                               'dft_pks=%s,dft_bytes=%s \n' % \
+                               (seed_hostname, each_interface,
+                                str(qos_pla_pkts), str(qos_pla_byte),
+                                str(qos_gol_pkts), str(qos_gol_byte),
+                                str(qos_sil_pkts), str(qos_sil_byte),
+                                str(qos_bro_pkts), str(qos_bro_byte),
+                                str(qos_tin_pkts), str(qos_tin_byte),
+                                str(qos_dft_pkts), str(qos_dft_byte))
+            for each_interface in ip_ipv6_interfaces:
+                ip_output = run_command(crawler_connected, "sho ip traffic interface %s" % each_interface, 1)
+                if len(ip_output.splitlines()) > 16:
+                    ip_pkts_sent = int(ip_output.splitlines()[-6].split()[1])
+                    ip_bytes_sent = int(ip_output.splitlines()[-6].split()[3])
+                    ip_pkts_rcvd = int(ip_output.splitlines()[-15].split()[1])
+                    ip_bytes_rcvd = int(ip_output.splitlines()[-15].split()[3])
+                    function_logger.info("ip_pkts_sent=%s ip_bytes_sent=%s ip_pkts_rcvd=%s ip_bytes_rcvd=%s "
+                                         % (ip_pkts_sent, ip_bytes_sent, ip_pkts_rcvd, ip_bytes_rcvd))
+                    if influx:
+                        results += 'IP_Stats,host=%s,interface=%s ' \
+                                   'ip_pkts_sent=%s,ip_bytes_sent=%s,' \
+                                   'ip_pkts_rcvd=%s,ip_bytes_rcvd=%s, \n' % \
+                                   (seed_hostname, each_interface,
+                                    str(ip_pkts_sent), str(ip_bytes_sent),
+                                    str(ip_pkts_rcvd), str(ip_bytes_rcvd))
+                    else:
+                        results += 'ip_pkts_sent{host="%s"} %s\n' % (seed_hostname, str(ip_pkts_sent))
+                        results += 'ip_bytes_sent{host="%s"} %s\n' % (seed_hostname, str(ip_bytes_sent))
+                        results += 'ip_pkts_rcvd{host="%s"} %s\n' % (seed_hostname, str(ip_pkts_rcvd))
+                        results += 'ip_bytes_rcvd{host="%s"} %s\n' % (seed_hostname, str(ip_bytes_rcvd))
+
+                ipv6_output = run_command(crawler_connected, "sho ipv6 traffic  interface %s" % each_interface, 1)
+                if len(ipv6_output.splitlines()) > 16:
+                    ipv6_pkts_sent = int(ip_output.splitlines()[-7].split()[1])
+                    ipv6_bytes_sent = int(ip_output.splitlines()[-7].split()[3])
+                    ipv6_pkts_rcvd = int(ip_output.splitlines()[-14].split()[1])
+                    ipv6_bytes_rcvd = int(ip_output.splitlines()[-14].split()[3])
+                    function_logger.info("ipv6_pkts_sent=%s ipv6_bytes_sent=%s ipv6_pkts_rcvd=%s ipv6_bytes_rcvd=%s "
+                                         % (ipv6_pkts_sent, ipv6_bytes_sent, ipv6_pkts_rcvd, ipv6_bytes_rcvd))
+                    if influx:
+                        results += 'IP_Stats,host=%s,interface=%s ' \
+                                   'ip_pkts_sent=%s,ip_bytes_sent=%s,' \
+                                   'ip_pkts_rcvd=%s,ip_bytes_rcvd=%s, \n' % \
+                                   (seed_hostname, each_interface,
+                                    str(ipv6_pkts_sent), str(ipv6_bytes_sent),
+                                    str(ipv6_pkts_rcvd), str(ipv6_bytes_rcvd))
+                    else:
+                        results += 'ipv6_pkts_sent{host="%s"} %s\n' % (seed_hostname, str(ipv6_pkts_sent))
+                        results += 'ipv6_bytes_sent{host="%s"} %s\n' % (seed_hostname, str(ipv6_bytes_sent))
+                        results += 'ipv6_pkts_rcvd{host="%s"} %s\n' % (seed_hostname, str(ipv6_pkts_rcvd))
+                        results += 'ipv6_bytes_rcvd{host="%s"} %s\n' % (seed_hostname, str(ipv6_bytes_rcvd))
+        elif switch:
+            print("switch")
         crawler_connected.close()
         crawler_connection_pre.close()
     except IndexError:
@@ -604,12 +681,18 @@ def process_hosts_in_parallel_combined(influx=False):
         host_details.append(each['username'])
         host_details.append(each['password'])
         host_details.append(each['OS'])
-        host_details.append(each['interfaces'])
+        host_details.append(each['qos_interfaces'])
+        host_details.append(each['ip_ipv6_interfaces'])
         if influx:
             host_details.append(True)
         hosts.append(host_details)
     with Pool(processes=MAX_THREADS) as process_worker:
-        results = process_worker.starmap(login_to_host_combined, hosts)
+        try:
+            results = process_worker.starmap(login_to_host_combined, hosts)
+        except Exception as e:
+            function_logger.error("Unexpected error:%s" % str(sys.exc_info()[0]))
+            function_logger.error("Unexpected error:%s" % str(e))
+            function_logger.error("TRACEBACK=%s" % str(traceback.format_exc()))
     function_logger.info("----------- Done Processing Parallel -----------")
     return results
 
@@ -644,7 +727,8 @@ def process_hosts_in_parallel_qos(influx=False):
         host_details.append(each['username'])
         host_details.append(each['password'])
         host_details.append(each['OS'])
-        host_details.append(each['interfaces'])
+        host_details.append(each['qos_interfaces'])
+        host_details.append(each['ip_ipv6_interfaces'])
         hosts.append(host_details)
         if influx:
             host_details.append(True)
@@ -719,7 +803,7 @@ def graceful_killer(signal_number, frame):
 
 def router_stats_combined():
     function_logger = logger.getChild("%s.%s.%s" % (inspect.stack()[2][3], inspect.stack()[1][3], inspect.stack()[0][3]))
-    function_logger.info("cpu_metrics_thread")
+    function_logger.info("router stats_combined_thread")
     historical_upload = ""
     while not THREAD_TO_BREAK.is_set():
         now = datetime.now()
