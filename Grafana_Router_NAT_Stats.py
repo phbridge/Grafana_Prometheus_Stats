@@ -224,19 +224,20 @@ def get_total_v4_v6_split(session, os_type, seed_hostname, interface, influx=Tru
         function_logger.warning("Index Error HOST=%s ##########" % seed_hostname)
         function_logger.warning(seed_hostname + "ip_output " + ip_output)
         function_logger.warning(seed_hostname + " ipv6_output " + ipv6_output)
-        return None
+        return ""
     except ValueError:
         function_logger.warning("Value Error HOST=%s ##########" % seed_hostname)
         function_logger.warning(seed_hostname + "ip_output " + ip_output)
         function_logger.warning(seed_hostname + " ipv6_output " + ipv6_output)
-        return None
+        return ""
     except Exception as e:
         function_logger.error("something went collecting data from host")
         function_logger.error("Unknown Error %s HOST=%s ##########" % (str(e), seed_hostname))
         function_logger.error("Unexpected error:%s" % str(sys.exc_info()[0]))
         function_logger.error("Unexpected error:%s" % str(e))
         function_logger.error("TRACEBACK=%s" % str(traceback.format_exc()))
-        return None
+        return ""
+    return ""
 
 
 def get_total_udp_nat_translations(session, os_type, seed_hostname):
