@@ -211,26 +211,18 @@ def get_total_v4_v6_split(session, os_type, seed_hostname, interface, influx=Tru
                 results += 'ipv6_pkts_rcvd{host="%s"} %s\n' % (seed_hostname, str(ipv6_pkts_rcvd))
                 results += 'ipv6_bytes_rcvd{host="%s"} %s\n' % (seed_hostname, str(ipv6_bytes_rcvd))
 
-
-        if os_type == "IOS-XE":
-            ip_ipv6_stats_raw = run_command(session, "sho ip nat translations udp total", 3)
-            ip_ipv6_stats = ip_ipv6_stats_raw.splitlines()[-3].split(" ")[4]
-        elif os_type == "IOS":
-            ip_ipv6_stats_raw = run_command(session, "sho ip nat translations udp | count udp", 3)
-            ip_ipv6_stats = ip_ipv6_stats_raw.splitlines()[-2].split(" ")[7]
-        else:
-            function_logger.warning(seed_hostname + " ########## OS Not Supported for Active_NAT_UDP ##########")
-            return None
-        function_logger.debug(seed_hostname + "raw ip_ipv6_stats_raw output " + ip_ipv6_stats_raw)
-        function_logger.debug(seed_hostname + " ip_ipv6_stats " + ip_ipv6_stats)
-        return str(ip_ipv6_stats)
+        function_logger.debug(seed_hostname + "ip_output " + ip_output)
+        function_logger.debug(seed_hostname + " ipv6_output " + ipv6_output)
+        return str(results)
     except IndexError:
         function_logger.warning("Index Error HOST=%s ##########" % seed_hostname)
-        function_logger.warning("raw_output was %s" % str(ip_ipv6_stats_raw))
+        function_logger.warning(seed_hostname + "ip_output " + ip_output)
+        function_logger.warning(seed_hostname + " ipv6_output " + ipv6_output)
         return None
     except ValueError:
         function_logger.warning("Value Error HOST=%s ##########" % seed_hostname)
-        function_logger.warning("raw_output was %s" % str(ip_ipv6_stats_raw))
+        function_logger.warning(seed_hostname + "ip_output " + ip_output)
+        function_logger.warning(seed_hostname + " ipv6_output " + ipv6_output)
         return None
     except Exception as e:
         function_logger.error("something went collecting data from host")
