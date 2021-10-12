@@ -198,11 +198,11 @@ def get_total_v4_v6_split(session, os_type, seed_hostname, interface, influx=Tru
         except IndexError:
             function_logger.warning("Index Error _process_v4_response")
             function_logger.info("rcvd_linev4=%s, sent_linev4=%s" % (rcvd_line, sent_line))
-            return ""
+            return IndexError
         except ValueError:
             function_logger.warning("Value Error _process_v4_response")
             function_logger.info("rcvd_linev4=%s, sent_linev4=%s" % (rcvd_line, sent_line))
-            return ""
+            return ValueError
         except Exception as e:
             function_logger.error("something went wrong processing _process_v4_response v4")
             function_logger.error("Unexpected error:%s" % str(sys.exc_info()[0]))
@@ -232,11 +232,11 @@ def get_total_v4_v6_split(session, os_type, seed_hostname, interface, influx=Tru
         except IndexError:
             function_logger.warning("Index Error _process_v6_response")
             function_logger.info("rcvd_linev6=%s, sent_linev6=%s" % (rcvd_line, sent_line))
-            return ""
+            return IndexError
         except ValueError:
             function_logger.warning("Value Error _process_v6_response")
             function_logger.info("rcvd_linev6=%s, sent_linev6=%s" % (rcvd_line, sent_line))
-            return ""
+            return ValueError
         except Exception as e:
             function_logger.error("something went wrong processing _process_v4_response v4")
             function_logger.error("Unexpected error:%s" % str(sys.exc_info()[0]))
