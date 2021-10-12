@@ -228,9 +228,11 @@ def get_total_v4_v6_split(session, os_type, seed_hostname, interface, influx=Tru
         elif os_type == "IOS":
             for line in ip_output.splitlines():
                 if re.search("Rcvd", line):
-                    rcvd_line = line
+                    rcvd_linev4 = line
                 elif re.search("Sent", line):
-                    sent_line = line
+                    sent_linev4 = line
+            function_logger.info(str(rcvd_linev4))
+            function_logger.info(str(sent_linev4))
             ip_pkts_sent = int(sent_linev4.split()[1])
             ip_bytes_sent = int(sent_linev4.split()[3])
             ip_pkts_rcvd = int(rcvd_linev4.split()[1])
@@ -254,6 +256,8 @@ def get_total_v4_v6_split(session, os_type, seed_hostname, interface, influx=Tru
                     rcvd_linev6 = line
                 elif re.search("Sent", line):
                     sent_linev6 = line
+            function_logger.info(str(rcvd_linev6))
+            function_logger.info(str(sent_linev6))
             ipv6_pkts_sent = int(sent_linev6.split()[1])
             ipv6_bytes_sent = int(sent_linev6.split()[3])
             ipv6_pkts_rcvd = int(rcvd_linev6.split()[1])
