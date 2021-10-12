@@ -223,18 +223,18 @@ def get_total_v4_v6_split(session, os_type, seed_hostname, interface, influx=Tru
         else:
             function_logger.warning(seed_hostname + " ########## OS Not Supported for Active_NAT_TCP ##########")
             return ""
-        function_logger.debug(seed_hostname + "ip_output " + ip_output)
-        function_logger.debug(seed_hostname + " ipv6_output " + ipv6_output)
+        function_logger.debug("%s %s ip_output %s" % (seed_hostname, interface, ip_output))
+        function_logger.debug("%s %s ipv6_output %s" % (seed_hostname, interface, ipv6_output))
         return str(results)
     except IndexError:
         function_logger.warning("Index Error HOST=%s ##########" % seed_hostname)
-        function_logger.warning(seed_hostname + "ip_output " + ip_output)
-        function_logger.warning(seed_hostname + " ipv6_output " + ipv6_output)
+        function_logger.warning("%s %s ip_output %s" % (seed_hostname, interface, ip_output))
+        function_logger.warning("%s %s ipv6_output %s" % (seed_hostname, interface, ipv6_output))
         return ""
     except ValueError:
         function_logger.warning("Value Error HOST=%s ##########" % seed_hostname)
-        function_logger.warning(seed_hostname + "ip_output " + ip_output)
-        function_logger.warning(seed_hostname + " ipv6_output " + ipv6_output)
+        function_logger.warning("%s %s ip_output %s" % (seed_hostname, interface, ip_output))
+        function_logger.warning("%s %s ipv6_output %s" % (seed_hostname, interface, ipv6_output))
         return ""
     except Exception as e:
         function_logger.error("something went collecting data from host")
