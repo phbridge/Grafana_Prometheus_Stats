@@ -169,24 +169,24 @@ def get_total_v4_v6_split(session, os_type, seed_hostname):
     function_logger = logger.getChild("%s.%s.%s" % (inspect.stack()[2][3], inspect.stack()[1][3], inspect.stack()[0][3]))
     try:
         if os_type == "IOS-XE":
-            active_nat_stats_raw = run_command(session, "sho ip nat translations udp total", 3)
-            active_nat_stats = active_nat_stats_raw.splitlines()[-3].split(" ")[4]
+            ip_ipv6_stats_raw = run_command(session, "sho ip nat translations udp total", 3)
+            ip_ipv6_stats = ip_ipv6_stats_raw.splitlines()[-3].split(" ")[4]
         elif os_type == "IOS":
-            active_nat_stats_raw = run_command(session, "sho ip nat translations udp | count udp", 3)
-            active_nat_stats = active_nat_stats_raw.splitlines()[-2].split(" ")[7]
+            ip_ipv6_stats_raw = run_command(session, "sho ip nat translations udp | count udp", 3)
+            ip_ipv6_stats = ip_ipv6_stats_raw.splitlines()[-2].split(" ")[7]
         else:
             function_logger.warning(seed_hostname + " ########## OS Not Supported for Active_NAT_UDP ##########")
             return None
-        function_logger.debug(seed_hostname + "raw nat output " + active_nat_stats_raw)
-        function_logger.debug(seed_hostname + " active_nat_tcp_stats " + active_nat_stats)
-        return str(active_nat_stats)
+        function_logger.debug(seed_hostname + "raw ip_ipv6_stats_raw output " + ip_ipv6_stats_raw)
+        function_logger.debug(seed_hostname + " ip_ipv6_stats " + ip_ipv6_stats)
+        return str(ip_ipv6_stats)
     except IndexError:
         function_logger.warning("Index Error HOST=%s ##########" % seed_hostname)
-        function_logger.warning("raw_output was %s" % str(active_nat_stats_raw))
+        function_logger.warning("raw_output was %s" % str(ip_ipv6_stats_raw))
         return None
     except ValueError:
         function_logger.warning("Value Error HOST=%s ##########" % seed_hostname)
-        function_logger.warning("raw_output was %s" % str(active_nat_stats_raw))
+        function_logger.warning("raw_output was %s" % str(ip_ipv6_stats_raw))
         return None
     except Exception as e:
         function_logger.error("something went collecting data from host")
