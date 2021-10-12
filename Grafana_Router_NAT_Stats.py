@@ -578,7 +578,8 @@ def login_to_host_combined(seed_hostname, seed_username, seed_password, device_O
     try:
         signal.signal(signal.SIGALRM, signal_handler)
         signal.signal(signal.SIGTERM, exit_handler)
-        signal.alarm(45)
+        signal.alarm(25)
+
 
         function_logger.debug(seed_hostname + " Starting connection")
         crawler_connection_pre.connect(hostname=seed_hostname, port=22, username=seed_username, password=seed_password,
@@ -716,6 +717,7 @@ def login_to_host_combined(seed_hostname, seed_username, seed_password, device_O
             print("switch")
         crawler_connected.close()
         crawler_connection_pre.close()
+        signal.alarm(0)
     except IndexError:
         function_logger.warning("Index Error HOST=%s ##########" % seed_hostname)
         function_logger.warning("raw_output was %s" % str(qos_output_raw))
