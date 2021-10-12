@@ -255,7 +255,8 @@ def get_total_v4_v6_split(session, os_type, seed_hostname, interface, influx=Tru
                     sent_linev4 = line
             function_logger.info(str(rcvd_linev4))
             function_logger.info(str(sent_linev4))
-            results += _process_v4_response(rcvd_linev4, sent_linev4)
+            if not (rcvd_linev4 is None and sent_linev4 is None):
+                results += _process_v4_response(rcvd_linev4, sent_linev4)
             for line in ipv6_output.splitlines():
                 if re.search("Rcvd", line):
                     rcvd_linev6 = line
@@ -263,7 +264,8 @@ def get_total_v4_v6_split(session, os_type, seed_hostname, interface, influx=Tru
                     sent_linev6 = line
             function_logger.info(str(rcvd_linev6))
             function_logger.info(str(sent_linev6))
-            results += _process_v6_response(rcvd_linev6, sent_linev6)
+            if not (rcvd_linev6 is None and sent_linev6 is None):
+                results += _process_v6_response(rcvd_linev6, sent_linev6)
         elif os_type == "IOS":
             for line in ip_output.splitlines():
                 if re.search("Rcvd", line):
@@ -272,7 +274,8 @@ def get_total_v4_v6_split(session, os_type, seed_hostname, interface, influx=Tru
                     sent_linev4 = line
             function_logger.info(str(rcvd_linev4))
             function_logger.info(str(sent_linev4))
-            results += _process_v4_response(rcvd_linev4, sent_linev4)
+            if not (rcvd_linev4 is None and sent_linev4 is None):
+                results += _process_v4_response(rcvd_linev4, sent_linev4)
             for line in ipv6_output.splitlines():
                 if re.search("Rcvd", line):
                     rcvd_linev6 = line
@@ -280,7 +283,8 @@ def get_total_v4_v6_split(session, os_type, seed_hostname, interface, influx=Tru
                     sent_linev6 = line
             function_logger.info(str(rcvd_linev6))
             function_logger.info(str(sent_linev6))
-            results += _process_v6_response(rcvd_linev6, sent_linev6)
+            if not (rcvd_linev6 is None and sent_linev6 is None):
+                results += _process_v6_response(rcvd_linev6, sent_linev6)
         else:
             function_logger.warning(seed_hostname + " ########## OS Not Supported for Active_NAT_TCP ##########")
             return ""
@@ -715,6 +719,7 @@ def login_to_host_combined(seed_hostname, seed_username, seed_password, device_O
                 results += get_total_v4_v6_split(crawler_connected, device_OS, seed_hostname, each_interface, influx)
         elif switch:
             print("switch")
+        signal.alarm(0)
         crawler_connected.close()
         crawler_connection_pre.close()
     except IndexError:
