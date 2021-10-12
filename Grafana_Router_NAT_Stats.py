@@ -178,13 +178,13 @@ def get_total_v4_v6_split(session, os_type, seed_hostname, interface, influx=Tru
 
     def _process_v4_response(rcvd_line, sent_line):
         results_inside = ""
-        function_logger.info("rcvdv4_line=%s, sent_linev4=%s" % (rcvd_line, sent_line))
+        function_logger.debug("rcvdv4_line=%s, sent_linev4=%s" % (rcvd_line, sent_line))
         try:
             ip_pkts_sent = int(sent_line.split()[1])
             ip_bytes_sent = int(sent_line.split()[3])
             ip_pkts_rcvd = int(rcvd_line.split()[1])
             ip_bytes_rcvd = int(rcvd_line.split()[3])
-            function_logger.info("hostname=%s ip_pkts_sent=%s ip_bytes_sent=%s ip_pkts_rcvd=%s ip_bytes_rcvd=%s "
+            function_logger.debug("hostname=%s ip_pkts_sent=%s ip_bytes_sent=%s ip_pkts_rcvd=%s ip_bytes_rcvd=%s "
                                  % (seed_hostname, ip_pkts_sent, ip_bytes_sent, ip_pkts_rcvd, ip_bytes_rcvd))
             if influx:
                 results_inside += 'IP_Stats,host=%s,interface=%s ip_pkts_sent=%s,ip_bytes_sent=%s,ip_pkts_rcvd=%s,ip_bytes_rcvd=%s \n' % \
@@ -197,11 +197,11 @@ def get_total_v4_v6_split(session, os_type, seed_hostname, interface, influx=Tru
             return results_inside
         except IndexError:
             function_logger.warning("Index Error _process_v4_response")
-            function_logger.info("rcvd_linev4=%s, sent_linev4=%s" % (rcvd_line, sent_line))
+            function_logger.warning("rcvd_linev4=%s, sent_linev4=%s" % (rcvd_line, sent_line))
             raise IndexError
         except ValueError:
             function_logger.warning("Value Error _process_v4_response")
-            function_logger.info("rcvd_linev4=%s, sent_linev4=%s" % (rcvd_line, sent_line))
+            function_logger.warning("rcvd_linev4=%s, sent_linev4=%s" % (rcvd_line, sent_line))
             raise ValueError
         except Exception as e:
             function_logger.error("something went wrong processing _process_v4_response v4")
@@ -212,13 +212,13 @@ def get_total_v4_v6_split(session, os_type, seed_hostname, interface, influx=Tru
 
     def _process_v6_response(rcvd_line, sent_line):
         results_inside = ""
-        function_logger.info("rcvd_linev6=%s, sent_linev6=%s" % (rcvd_line, sent_line))
+        function_logger.debug("rcvd_linev6=%s, sent_linev6=%s" % (rcvd_line, sent_line))
         try:
             ipv6_pkts_sent = int(sent_line.split()[1])
             ipv6_bytes_sent = int(sent_line.split()[3])
             ipv6_pkts_rcvd = int(rcvd_line.split()[1])
             ipv6_bytes_rcvd = int(rcvd_line.split()[3])
-            function_logger.info("hostname=%s ipv6_pkts_sent=%s ipv6_bytes_sent=%s ipv6_pkts_rcvd=%s ipv6_bytes_rcvd=%s "
+            function_logger.debug("hostname=%s ipv6_pkts_sent=%s ipv6_bytes_sent=%s ipv6_pkts_rcvd=%s ipv6_bytes_rcvd=%s "
                                  % (seed_hostname, ipv6_pkts_sent, ipv6_bytes_sent, ipv6_pkts_rcvd, ipv6_bytes_rcvd))
             if influx:
                 results_inside += 'IP_Stats,host=%s,interface=%s ipv6_pkts_sent=%s,ipv6_bytes_sent=%s,ipv6_pkts_rcvd=%s,ipv6_bytes_rcvd=%s \n' % \
@@ -231,11 +231,11 @@ def get_total_v4_v6_split(session, os_type, seed_hostname, interface, influx=Tru
             return results_inside
         except IndexError:
             function_logger.warning("Index Error _process_v6_response")
-            function_logger.info("rcvd_linev6=%s, sent_linev6=%s" % (rcvd_line, sent_line))
+            function_logger.warning("rcvd_linev6=%s, sent_linev6=%s" % (rcvd_line, sent_line))
             raise IndexError
         except ValueError:
             function_logger.warning("Value Error _process_v6_response")
-            function_logger.info("rcvd_linev6=%s, sent_linev6=%s" % (rcvd_line, sent_line))
+            function_logger.warning("rcvd_linev6=%s, sent_linev6=%s" % (rcvd_line, sent_line))
             raise ValueError
         except Exception as e:
             function_logger.error("something went wrong processing _process_v4_response v4")
@@ -253,8 +253,8 @@ def get_total_v4_v6_split(session, os_type, seed_hostname, interface, influx=Tru
                     rcvd_linev4 = line
                 elif re.search("Sent", line):
                     sent_linev4 = line
-            function_logger.info(str(rcvd_linev4))
-            function_logger.info(str(sent_linev4))
+            function_logger.debug(str(rcvd_linev4))
+            function_logger.debug(str(sent_linev4))
             if not (rcvd_linev4 is "" and sent_linev4 is ""):
                 results += _process_v4_response(rcvd_linev4, sent_linev4)
             for line in ipv6_output.splitlines():
@@ -262,8 +262,8 @@ def get_total_v4_v6_split(session, os_type, seed_hostname, interface, influx=Tru
                     rcvd_linev6 = line
                 elif re.search("Sent", line):
                     sent_linev6 = line
-            function_logger.info(str(rcvd_linev6))
-            function_logger.info(str(sent_linev6))
+            function_logger.debug(str(rcvd_linev6))
+            function_logger.debug(str(sent_linev6))
             if not (rcvd_linev6 is "" and sent_linev6 is ""):
                 results += _process_v6_response(rcvd_linev6, sent_linev6)
         elif os_type == "IOS":
@@ -272,8 +272,8 @@ def get_total_v4_v6_split(session, os_type, seed_hostname, interface, influx=Tru
                     rcvd_linev4 = line
                 elif re.search("Sent", line):
                     sent_linev4 = line
-            function_logger.info(str(rcvd_linev4))
-            function_logger.info(str(sent_linev4))
+            function_logger.debug(str(rcvd_linev4))
+            function_logger.debug(str(sent_linev4))
             if not (rcvd_linev4 is "" and sent_linev4 is ""):
                 results += _process_v4_response(rcvd_linev4, sent_linev4)
             for line in ipv6_output.splitlines():
@@ -281,8 +281,8 @@ def get_total_v4_v6_split(session, os_type, seed_hostname, interface, influx=Tru
                     rcvd_linev6 = line
                 elif re.search("Sent", line):
                     sent_linev6 = line
-            function_logger.info(str(rcvd_linev6))
-            function_logger.info(str(sent_linev6))
+            function_logger.debug(str(rcvd_linev6))
+            function_logger.debug(str(sent_linev6))
             if not (rcvd_linev6 is "" and sent_linev6 is ""):
                 results += _process_v6_response(rcvd_linev6, sent_linev6)
         else:
