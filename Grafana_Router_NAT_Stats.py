@@ -567,22 +567,22 @@ def login_to_host_combined(seed_hostname, seed_username, seed_password, device_O
     crawler_connection_pre = paramiko.SSHClient()
     crawler_connection_pre.set_missing_host_key_policy(paramiko.AutoAddPolicy())
 
-    class SSHTimeout(Exception):
-        signal.alarm(0)
-        pass
+    # class SSHTimeout(Exception):
+    #     signal.alarm(0)
+    #     pass
+    #
+    # def signal_handler(sig, frame):
+    #     function_logger.warning("SIGALRM on host=%s" % seed_hostname)
+    #     raise TimeoutError
+    #     # raise SSHTimeout
+    #
+    # def exit_handler(sig, frame):
+    #     function_logger.info("SIGTERM")
+    #     raise Exception("Caught SIGTERM")
 
-    def signal_handler(sig, frame):
-        function_logger.warning("SIGALRM on host=%s" % seed_hostname)
-        raise TimeoutError
-        # raise SSHTimeout
-
-    def exit_handler(sig, frame):
-        function_logger.info("SIGTERM")
-        raise Exception("Caught SIGTERM")
-
-    signal.signal(signal.SIGALRM, signal_handler)
-    signal.signal(signal.SIGTERM, exit_handler)
-    signal.alarm(25)
+    # signal.signal(signal.SIGALRM, signal_handler)
+    # signal.signal(signal.SIGTERM, exit_handler)
+    # signal.alarm(25)
     results = ""
     try:
         function_logger.debug(seed_hostname + " Starting connection")
@@ -719,37 +719,37 @@ def login_to_host_combined(seed_hostname, seed_username, seed_password, device_O
                 results += get_total_v4_v6_split(crawler_connected, device_OS, seed_hostname, each_interface, influx)
         elif switch:
             print("switch")
-        signal.alarm(0)
+        # signal.alarm(0)
         crawler_connected.close()
         crawler_connection_pre.close()
     except IndexError:
         function_logger.warning("Index Error HOST=%s ##########" % seed_hostname)
         function_logger.warning("raw_output was %s" % str(qos_output_raw))
-        signal.alarm(0)
+        # signal.alarm(0)
     except ValueError:
         function_logger.warning("Value Error HOST=%s ##########" % seed_hostname)
         function_logger.warning("raw_output was %s" % str(qos_output_raw))
-        signal.alarm(0)
+        # signal.alarm(0)
     except paramiko.AuthenticationException:
         function_logger.warning("Auth Error HOST=%s" % seed_hostname)
-        signal.alarm(0)
+        # signal.alarm(0)
     except paramiko.SSHException:
         function_logger.warning("SSH Error HOST=%s" % seed_hostname)
-        signal.alarm(0)
+        # signal.alarm(0)
     except socket.error:
         function_logger.warning("Socket Error HOST=%s" % seed_hostname)
-        signal.alarm(0)
+        # signal.alarm(0)
     except TimeoutError:
         function_logger.warning("Timeout error HOST=%s" % seed_hostname)
-        signal.alarm(0)
+        # signal.alarm(0)
     except Exception as e:
         function_logger.error("something went bad collecting from host")
         function_logger.error("Unknown Error %s HOST=%s ##########" % (str(e), seed_hostname))
         function_logger.error("Unexpected error:%s" % str(sys.exc_info()[0]))
         function_logger.error("Unexpected error:%s" % str(e))
         function_logger.error("TRACEBACK=%s" % str(traceback.format_exc()))
-        signal.alarm(0)
-    signal.alarm(0)
+        # signal.alarm(0)
+    # signal.alarm(0)
     function_logger.info("finishing on host=%s" % seed_hostname)
     return results
 
