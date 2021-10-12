@@ -175,56 +175,63 @@ def get_total_v4_v6_split(session, os_type, seed_hostname, interface, influx=Tru
     sent_linev4 = ""
     rcvd_linev6 = ""
     sent_linev6 = ""
+
+    def _process_v4_response(rcvd_line, sent_line):
+        results_inside = ""
+        ip_pkts_sent = int(sent_line.split()[1])
+        ip_bytes_sent = int(sent_line.split()[3])
+        ip_pkts_rcvd = int(rcvd_line.split()[1])
+        ip_bytes_rcvd = int(rcvd_line.split()[3])
+        function_logger.info("hostname=%s ip_pkts_sent=%s ip_bytes_sent=%s ip_pkts_rcvd=%s ip_bytes_rcvd=%s "
+                             % (seed_hostname, ip_pkts_sent, ip_bytes_sent, ip_pkts_rcvd, ip_bytes_rcvd))
+        if influx:
+            results_inside += 'IP_Stats,host=%s,interface=%s ip_pkts_sent=%s,ip_bytes_sent=%s,ip_pkts_rcvd=%s,ip_bytes_rcvd=%s \n' % \
+                              (seed_hostname, interface, str(ip_pkts_sent), str(ip_bytes_sent), str(ip_pkts_rcvd), str(ip_bytes_rcvd))
+        else:
+            results_inside += 'ip_pkts_sent{host="%s"} %s\n' % (seed_hostname, str(ip_pkts_sent))
+            results_inside += 'ip_bytes_sent{host="%s"} %s\n' % (seed_hostname, str(ip_bytes_sent))
+            results_inside += 'ip_pkts_rcvd{host="%s"} %s\n' % (seed_hostname, str(ip_pkts_rcvd))
+            results_inside += 'ip_bytes_rcvd{host="%s"} %s\n' % (seed_hostname, str(ip_bytes_rcvd))
+        return results_inside
+
+    def _process_v6_response(rcvd_line, sent_line):
+        results_inside = ""
+        ipv6_pkts_sent = int(sent_line.split()[1])
+        ipv6_bytes_sent = int(sent_line.split()[3])
+        ipv6_pkts_rcvd = int(rcvd_line.split()[1])
+        ipv6_bytes_rcvd = int(rcvd_line.split()[3])
+        function_logger.info("hostname=%s ipv6_pkts_sent=%s ipv6_bytes_sent=%s ipv6_pkts_rcvd=%s ipv6_bytes_rcvd=%s "
+                             % (seed_hostname, ipv6_pkts_sent, ipv6_bytes_sent, ipv6_pkts_rcvd, ipv6_bytes_rcvd))
+        if influx:
+            results_inside += 'IP_Stats,host=%s,interface=%s ipv6_pkts_sent=%s,ipv6_bytes_sent=%s,ipv6_pkts_rcvd=%s,ipv6_bytes_rcvd=%s \n' % \
+                              (seed_hostname, interface, str(ipv6_pkts_sent), str(ipv6_bytes_sent), str(ipv6_pkts_rcvd), str(ipv6_bytes_rcvd))
+        else:
+            results_inside += 'ipv6_pkts_sent{host="%s"} %s\n' % (seed_hostname, str(ip_pkts_sent))
+            results_inside += 'ipv6_bytes_sent{host="%s"} %s\n' % (seed_hostname, str(ip_bytes_sent))
+            results_inside += 'ipv6_pkts_rcvd{host="%s"} %s\n' % (seed_hostname, str(ip_pkts_rcvd))
+            results_inside += 'ipv6_bytes_rcvd{host="%s"} %s\n' % (seed_hostname, str(ip_bytes_rcvd))
+        return results_inside
+
     try:
         ip_output = run_command(session, "sho ip traffic interface %s" % interface)
         ipv6_output = run_command(session, "sho ipv6 traffic  interface %s" % interface)
         if os_type == "IOS-XE":
             for line in ip_output.splitlines():
                 if re.search("Rcvd", line):
-                    rcvd_line = line
+                    rcvd_linev4 = line
                 elif re.search("Sent", line):
-                    sent_line = line
-            ip_pkts_sent = int(sent_linev4.split()[1])
-            ip_bytes_sent = int(sent_linev4.split()[3])
-            ip_pkts_rcvd = int(rcvd_linev4.split()[1])
-            ip_bytes_rcvd = int(rcvd_linev4.split()[3])
-            function_logger.info("hostname=%s ip_pkts_sent=%s ip_bytes_sent=%s ip_pkts_rcvd=%s ip_bytes_rcvd=%s "
-                                 % (seed_hostname, ip_pkts_sent, ip_bytes_sent, ip_pkts_rcvd, ip_bytes_rcvd))
-            if influx:
-                results += 'IP_Stats,host=%s,interface=%s ' \
-                           'ip_pkts_sent=%s,ip_bytes_sent=%s,' \
-                           'ip_pkts_rcvd=%s,ip_bytes_rcvd=%s \n' % \
-                           (seed_hostname, interface,
-                            str(ip_pkts_sent), str(ip_bytes_sent),
-                            str(ip_pkts_rcvd), str(ip_bytes_rcvd))
-            else:
-                results += 'ip_pkts_sent{host="%s"} %s\n' % (seed_hostname, str(ip_pkts_sent))
-                results += 'ip_bytes_sent{host="%s"} %s\n' % (seed_hostname, str(ip_bytes_sent))
-                results += 'ip_pkts_rcvd{host="%s"} %s\n' % (seed_hostname, str(ip_pkts_rcvd))
-                results += 'ip_bytes_rcvd{host="%s"} %s\n' % (seed_hostname, str(ip_bytes_rcvd))
+                    sent_linev4 = line
+            function_logger.info(str(rcvd_linev4))
+            function_logger.info(str(sent_linev4))
+            _process_v4_response(rcvd_linev4, sent_linev4)
             for line in ipv6_output.splitlines():
                 if re.search("Rcvd", line):
                     rcvd_linev6 = line
                 elif re.search("Sent", line):
                     sent_linev6 = line
-            ipv6_pkts_sent = int(sent_linev6.split()[1])
-            ipv6_bytes_sent = int(sent_linev6.split()[3])
-            ipv6_pkts_rcvd = int(rcvd_linev6.split()[1])
-            ipv6_bytes_rcvd = int(rcvd_linev6.split()[3])
-            function_logger.info("hostname=%s ipv6_pkts_sent=%s ipv6_bytes_sent=%s ipv6_pkts_rcvd=%s ipv6_bytes_rcvd=%s "
-                                 % (seed_hostname, ipv6_pkts_sent, ipv6_bytes_sent, ipv6_pkts_rcvd, ipv6_bytes_rcvd))
-            if influx:
-                results += 'IP_Stats,host=%s,interface=%s ' \
-                           'ipv6_pkts_sent=%s,ipv6_bytes_sent=%s,' \
-                           'ipv6_pkts_rcvd=%s,ipv6_bytes_rcvd=%s \n' % \
-                           (seed_hostname, interface,
-                            str(ipv6_pkts_sent), str(ipv6_bytes_sent),
-                            str(ipv6_pkts_rcvd), str(ipv6_bytes_rcvd))
-            else:
-                results += 'ipv6_pkts_sent{host="%s"} %s\n' % (seed_hostname, str(ip_pkts_sent))
-                results += 'ipv6_bytes_sent{host="%s"} %s\n' % (seed_hostname, str(ip_bytes_sent))
-                results += 'ipv6_pkts_rcvd{host="%s"} %s\n' % (seed_hostname, str(ip_pkts_rcvd))
-                results += 'ipv6_bytes_rcvd{host="%s"} %s\n' % (seed_hostname, str(ip_bytes_rcvd))
+            function_logger.info(str(rcvd_linev6))
+            function_logger.info(str(sent_linev6))
+            _process_v6_response(rcvd_linev6, sent_linev6)
         elif os_type == "IOS":
             for line in ip_output.splitlines():
                 if re.search("Rcvd", line):
@@ -233,24 +240,7 @@ def get_total_v4_v6_split(session, os_type, seed_hostname, interface, influx=Tru
                     sent_linev4 = line
             function_logger.info(str(rcvd_linev4))
             function_logger.info(str(sent_linev4))
-            ip_pkts_sent = int(sent_linev4.split()[1])
-            ip_bytes_sent = int(sent_linev4.split()[3])
-            ip_pkts_rcvd = int(rcvd_linev4.split()[1])
-            ip_bytes_rcvd = int(rcvd_linev4.split()[3])
-            function_logger.info("hostname=%s ip_pkts_sent=%s ip_bytes_sent=%s ip_pkts_rcvd=%s ip_bytes_rcvd=%s "
-                                 % (seed_hostname, ip_pkts_sent, ip_bytes_sent, ip_pkts_rcvd, ip_bytes_rcvd))
-            if influx:
-                results += 'IP_Stats,host=%s,interface=%s ' \
-                           'ip_pkts_sent=%s,ip_bytes_sent=%s,' \
-                           'ip_pkts_rcvd=%s,ip_bytes_rcvd=%s \n' % \
-                           (seed_hostname, interface,
-                            str(ip_pkts_sent), str(ip_bytes_sent),
-                            str(ip_pkts_rcvd), str(ip_bytes_rcvd))
-            else:
-                results += 'ip_pkts_sent{host="%s"} %s\n' % (seed_hostname, str(ip_pkts_sent))
-                results += 'ip_bytes_sent{host="%s"} %s\n' % (seed_hostname, str(ip_bytes_sent))
-                results += 'ip_pkts_rcvd{host="%s"} %s\n' % (seed_hostname, str(ip_pkts_rcvd))
-                results += 'ip_bytes_rcvd{host="%s"} %s\n' % (seed_hostname, str(ip_bytes_rcvd))
+            _process_v4_response(rcvd_linev4, sent_linev4)
             for line in ipv6_output.splitlines():
                 if re.search("Rcvd", line):
                     rcvd_linev6 = line
@@ -258,114 +248,7 @@ def get_total_v4_v6_split(session, os_type, seed_hostname, interface, influx=Tru
                     sent_linev6 = line
             function_logger.info(str(rcvd_linev6))
             function_logger.info(str(sent_linev6))
-            ipv6_pkts_sent = int(sent_linev6.split()[1])
-            ipv6_bytes_sent = int(sent_linev6.split()[3])
-            ipv6_pkts_rcvd = int(rcvd_linev6.split()[1])
-            ipv6_bytes_rcvd = int(rcvd_linev6.split()[3])
-            function_logger.info("hostname=%s ipv6_pkts_sent=%s ipv6_bytes_sent=%s ipv6_pkts_rcvd=%s ipv6_bytes_rcvd=%s "
-                                 % (seed_hostname, ipv6_pkts_sent, ipv6_bytes_sent, ipv6_pkts_rcvd, ipv6_bytes_rcvd))
-            if influx:
-                results += 'IP_Stats,host=%s,interface=%s ' \
-                           'ipv6_pkts_sent=%s,ipv6_bytes_sent=%s,' \
-                           'ipv6_pkts_rcvd=%s,ipv6_bytes_rcvd=%s \n' % \
-                           (seed_hostname, interface,
-                            str(ipv6_pkts_sent), str(ipv6_bytes_sent),
-                            str(ipv6_pkts_rcvd), str(ipv6_bytes_rcvd))
-            else:
-                results += 'ipv6_pkts_sent{host="%s"} %s\n' % (seed_hostname, str(ip_pkts_sent))
-                results += 'ipv6_bytes_sent{host="%s"} %s\n' % (seed_hostname, str(ip_bytes_sent))
-                results += 'ipv6_pkts_rcvd{host="%s"} %s\n' % (seed_hostname, str(ip_pkts_rcvd))
-                results += 'ipv6_bytes_rcvd{host="%s"} %s\n' % (seed_hostname, str(ip_bytes_rcvd))
-            # if len(ip_output.splitlines()) > 16:
-            #     function_logger.info("host=%s ip_length=%s" % (seed_hostname, len(ip_output.splitlines())))
-            #     function_logger.info("host=%s %s" % (seed_hostname, ip_output.splitlines()[14]))
-            #     function_logger.info("host=%s %s" % (seed_hostname, ip_output.splitlines()[5]))
-            #     ip_pkts_sent = int(ip_output.splitlines()[14].split()[1])
-            #     ip_bytes_sent = int(ip_output.splitlines()[14].split()[3])
-            #     ip_pkts_rcvd = int(ip_output.splitlines()[5].split()[1])
-            #     ip_bytes_rcvd = int(ip_output.splitlines()[5].split()[3])
-            #     function_logger.info("hostname=%s ip_pkts_sent=%s ip_bytes_sent=%s ip_pkts_rcvd=%s ip_bytes_rcvd=%s "
-            #                          % (seed_hostname, ip_pkts_sent, ip_bytes_sent, ip_pkts_rcvd, ip_bytes_rcvd))
-            #     if influx:
-            #         results += 'IP_Stats,host=%s,interface=%s ' \
-            #                    'ip_pkts_sent=%s,ip_bytes_sent=%s,' \
-            #                    'ip_pkts_rcvd=%s,ip_bytes_rcvd=%s \n' % \
-            #                    (seed_hostname, interface,
-            #                     str(ip_pkts_sent), str(ip_bytes_sent),
-            #                     str(ip_pkts_rcvd), str(ip_bytes_rcvd))
-            #     else:
-            #         results += 'ip_pkts_sent{host="%s"} %s\n' % (seed_hostname, str(ip_pkts_sent))
-            #         results += 'ip_bytes_sent{host="%s"} %s\n' % (seed_hostname, str(ip_bytes_sent))
-            #         results += 'ip_pkts_rcvd{host="%s"} %s\n' % (seed_hostname, str(ip_pkts_rcvd))
-            #         results += 'ip_bytes_rcvd{host="%s"} %s\n' % (seed_hostname, str(ip_bytes_rcvd))
-            # if 22 < len(ipv6_output.splitlines()) > 16:
-            #     function_logger.info("host=%s ipv6_length=%s" % (seed_hostname, len(ipv6_output.splitlines())))
-            #     function_logger.info("host=%s %s" % (seed_hostname, ipv6_output.splitlines()[12]))
-            #     function_logger.info("host=%s %s" % (seed_hostname, ipv6_output.splitlines()[5]))
-            #     ipv6_pkts_sent = int(ipv6_output.splitlines()[12].split()[1])
-            #     ipv6_bytes_sent = int(ipv6_output.splitlines()[12].split()[3])
-            #     ipv6_pkts_rcvd = int(ipv6_output.splitlines()[5].split()[1])
-            #     ipv6_bytes_rcvd = int(ipv6_output.splitlines()[5].split()[3])
-            #     function_logger.info("hostname=%s ipv6_pkts_sent=%s ipv6_bytes_sent=%s ipv6_pkts_rcvd=%s ipv6_bytes_rcvd=%s "
-            #                          % (seed_hostname, ipv6_pkts_sent, ipv6_bytes_sent, ipv6_pkts_rcvd, ipv6_bytes_rcvd))
-            #     if influx:
-            #         results += 'IP_Stats,host=%s,interface=%s ' \
-            #                    'ip_pkts_sent=%s,ip_bytes_sent=%s,' \
-            #                    'ip_pkts_rcvd=%s,ip_bytes_rcvd=%s \n' % \
-            #                    (seed_hostname, interface,
-            #                     str(ipv6_pkts_sent), str(ipv6_bytes_sent),
-            #                     str(ipv6_pkts_rcvd), str(ipv6_bytes_rcvd))
-            #     else:
-            #         results += 'ipv6_pkts_sent{host="%s"} %s\n' % (seed_hostname, str(ipv6_pkts_sent))
-            #         results += 'ipv6_bytes_sent{host="%s"} %s\n' % (seed_hostname, str(ipv6_bytes_sent))
-            #         results += 'ipv6_pkts_rcvd{host="%s"} %s\n' % (seed_hostname, str(ipv6_pkts_rcvd))
-            #         results += 'ipv6_bytes_rcvd{host="%s"} %s\n' % (seed_hostname, str(ipv6_bytes_rcvd))
-        # elif os_type == "IOS":
-        #     if 22 < len(ip_output.splitlines()) > 16:
-        #         function_logger.info("host=%s ip_length=%s" % (seed_hostname, len(ip_output.splitlines())))
-        #         function_logger.info("host=%s %s" % (seed_hostname, ip_output.splitlines()[14]))
-        #         function_logger.info("host=%s %s" % (seed_hostname, ip_output.splitlines()[5]))
-        #         ip_pkts_sent = int(ip_output.splitlines()[14].split()[1])
-        #         ip_bytes_sent = int(ip_output.splitlines()[14].split()[3])
-        #         ip_pkts_rcvd = int(ip_output.splitlines()[5].split()[1])
-        #         ip_bytes_rcvd = int(ip_output.splitlines()[5].split()[3])
-        #         function_logger.info("hostname=%s ip_pkts_sent=%s ip_bytes_sent=%s ip_pkts_rcvd=%s ip_bytes_rcvd=%s "
-        #                              % (seed_hostname, ip_pkts_sent, ip_bytes_sent, ip_pkts_rcvd, ip_bytes_rcvd))
-        #         if influx:
-        #             results += 'IP_Stats,host=%s,interface=%s ' \
-        #                        'ip_pkts_sent=%s,ip_bytes_sent=%s,' \
-        #                        'ip_pkts_rcvd=%s,ip_bytes_rcvd=%s \n' % \
-        #                        (seed_hostname, interface,
-        #                         str(ip_pkts_sent), str(ip_bytes_sent),
-        #                         str(ip_pkts_rcvd), str(ip_bytes_rcvd))
-        #         else:
-        #             results += 'ip_pkts_sent{host="%s"} %s\n' % (seed_hostname, str(ip_pkts_sent))
-        #             results += 'ip_bytes_sent{host="%s"} %s\n' % (seed_hostname, str(ip_bytes_sent))
-        #             results += 'ip_pkts_rcvd{host="%s"} %s\n' % (seed_hostname, str(ip_pkts_rcvd))
-        #             results += 'ip_bytes_rcvd{host="%s"} %s\n' % (seed_hostname, str(ip_bytes_rcvd))
-        #     if 22 < len(ipv6_output.splitlines()) > 16:
-        #         function_logger.info("host=%s ipv6_length=%s" % (seed_hostname, len(ipv6_output.splitlines())))
-        #         function_logger.info("host=%s %s" % (seed_hostname, ipv6_output.splitlines()[12]))
-        #         function_logger.info("host=%s %s" % (seed_hostname, ipv6_output.splitlines()[5]))
-        #         ipv6_pkts_sent = int(ipv6_output.splitlines()[12].split()[1])
-        #         ipv6_bytes_sent = int(ipv6_output.splitlines()[12].split()[3])
-        #         ipv6_pkts_rcvd = int(ipv6_output.splitlines()[5].split()[1])
-        #         ipv6_bytes_rcvd = int(ipv6_output.splitlines()[5].split()[3])
-        #         function_logger.info(
-        #             "hostname=%s ipv6_pkts_sent=%s ipv6_bytes_sent=%s ipv6_pkts_rcvd=%s ipv6_bytes_rcvd=%s "
-        #             % (seed_hostname, ipv6_pkts_sent, ipv6_bytes_sent, ipv6_pkts_rcvd, ipv6_bytes_rcvd))
-        #         if influx:
-        #             results += 'IP_Stats,host=%s,interface=%s ' \
-        #                        'ip_pkts_sent=%s,ip_bytes_sent=%s,' \
-        #                        'ip_pkts_rcvd=%s,ip_bytes_rcvd=%s \n' % \
-        #                        (seed_hostname, interface,
-        #                         str(ipv6_pkts_sent), str(ipv6_bytes_sent),
-        #                         str(ipv6_pkts_rcvd), str(ipv6_bytes_rcvd))
-        #         else:
-        #             results += 'ipv6_pkts_sent{host="%s"} %s\n' % (seed_hostname, str(ipv6_pkts_sent))
-        #             results += 'ipv6_bytes_sent{host="%s"} %s\n' % (seed_hostname, str(ipv6_bytes_sent))
-        #             results += 'ipv6_pkts_rcvd{host="%s"} %s\n' % (seed_hostname, str(ipv6_pkts_rcvd))
-        #             results += 'ipv6_bytes_rcvd{host="%s"} %s\n' % (seed_hostname, str(ipv6_bytes_rcvd))
+            _process_v6_response(rcvd_linev6, sent_linev6)
         else:
             function_logger.warning(seed_hostname + " ########## OS Not Supported for Active_NAT_TCP ##########")
             return ""
