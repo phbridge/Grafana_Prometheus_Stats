@@ -175,6 +175,7 @@ def get_total_v4_v6_split(session, os_type, seed_hostname, interface, influx=Tru
         ipv6_output = run_command(session, "sho ipv6 traffic  interface %s" % interface, 3)
         if os_type == "IOS-XE":
             if len(ip_output.splitlines()) > 16:
+                function_logger.info("host=%s ip_length=%s" % (seed_hostname, len(ip_output.splitlines())))
                 function_logger.info("host=%s %s" % (seed_hostname, ip_output.splitlines()[14]))
                 function_logger.info("host=%s %s" % (seed_hostname, ip_output.splitlines()[5]))
                 ip_pkts_sent = int(ip_output.splitlines()[14].split()[1])
@@ -196,6 +197,7 @@ def get_total_v4_v6_split(session, os_type, seed_hostname, interface, influx=Tru
                     results += 'ip_pkts_rcvd{host="%s"} %s\n' % (seed_hostname, str(ip_pkts_rcvd))
                     results += 'ip_bytes_rcvd{host="%s"} %s\n' % (seed_hostname, str(ip_bytes_rcvd))
             if len(ipv6_output.splitlines()) > 16:
+                function_logger.info("host=%s ipv6_length=%s" % (seed_hostname, len(ip_output.splitlines())))
                 function_logger.info("host=%s %s" % (seed_hostname, ipv6_output.splitlines()[12]))
                 function_logger.info("host=%s %s" % (seed_hostname, ipv6_output.splitlines()[5]))
                 ipv6_pkts_sent = int(ipv6_output.splitlines()[12].split()[1])
