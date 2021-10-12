@@ -181,12 +181,12 @@ def get_total_v4_v6_split(session, os_type, seed_hostname, interface, influx=Tru
                 ip_bytes_sent = int(ip_output.splitlines()[14].split()[3])
                 ip_pkts_rcvd = int(ip_output.splitlines()[5].split()[1])
                 ip_bytes_rcvd = int(ip_output.splitlines()[5].split()[3])
-                function_logger.info("ip_pkts_sent=%s ip_bytes_sent=%s ip_pkts_rcvd=%s ip_bytes_rcvd=%s "
-                                     % (ip_pkts_sent, ip_bytes_sent, ip_pkts_rcvd, ip_bytes_rcvd))
+                function_logger.info("hostname=%s ip_pkts_sent=%s ip_bytes_sent=%s ip_pkts_rcvd=%s ip_bytes_rcvd=%s "
+                                     % (seed_hostname, ip_pkts_sent, ip_bytes_sent, ip_pkts_rcvd, ip_bytes_rcvd))
                 if influx:
                     results += 'IP_Stats,host=%s,interface=%s ' \
                                'ip_pkts_sent=%s,ip_bytes_sent=%s,' \
-                               'ip_pkts_rcvd=%s,ip_bytes_rcvd=%s, \n' % \
+                               'ip_pkts_rcvd=%s,ip_bytes_rcvd=%s \n' % \
                                (seed_hostname, interface,
                                 str(ip_pkts_sent), str(ip_bytes_sent),
                                 str(ip_pkts_rcvd), str(ip_bytes_rcvd))
@@ -202,12 +202,12 @@ def get_total_v4_v6_split(session, os_type, seed_hostname, interface, influx=Tru
                 ipv6_bytes_sent = int(ipv6_output.splitlines()[14].split()[3])
                 ipv6_pkts_rcvd = int(ipv6_output.splitlines()[5].split()[1])
                 ipv6_bytes_rcvd = int(ipv6_output.splitlines()[5].split()[3])
-                function_logger.info("ipv6_pkts_sent=%s ipv6_bytes_sent=%s ipv6_pkts_rcvd=%s ipv6_bytes_rcvd=%s "
-                                     % (ipv6_pkts_sent, ipv6_bytes_sent, ipv6_pkts_rcvd, ipv6_bytes_rcvd))
+                function_logger.info("hostname=%s ipv6_pkts_sent=%s ipv6_bytes_sent=%s ipv6_pkts_rcvd=%s ipv6_bytes_rcvd=%s "
+                                     % (seed_hostname, ipv6_pkts_sent, ipv6_bytes_sent, ipv6_pkts_rcvd, ipv6_bytes_rcvd))
                 if influx:
                     results += 'IP_Stats,host=%s,interface=%s ' \
                                'ip_pkts_sent=%s,ip_bytes_sent=%s,' \
-                               'ip_pkts_rcvd=%s,ip_bytes_rcvd=%s, \n' % \
+                               'ip_pkts_rcvd=%s,ip_bytes_rcvd=%s \n' % \
                                (seed_hostname, interface,
                                 str(ipv6_pkts_sent), str(ipv6_bytes_sent),
                                 str(ipv6_pkts_rcvd), str(ipv6_bytes_rcvd))
