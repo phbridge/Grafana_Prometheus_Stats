@@ -95,7 +95,7 @@ THREAD_TO_BREAK = threading.Event()
 flask_app = Flask('router_nat_stats')
 
 
-def run_command(session, command, wait=4):
+def run_command(session, command, wait=2):
     output = ""
     session.send(command + "\n")
     time.sleep(wait)       # TODO implement something better than sleep here?
