@@ -196,10 +196,10 @@ def get_total_v4_v6_split(session, os_type, seed_hostname, interface, influx=Tru
                     results += 'ip_pkts_rcvd{host="%s"} %s\n' % (seed_hostname, str(ip_pkts_rcvd))
                     results += 'ip_bytes_rcvd{host="%s"} %s\n' % (seed_hostname, str(ip_bytes_rcvd))
             if len(ipv6_output.splitlines()) > 16:
-                function_logger.info("host=%s %s" % (seed_hostname, ipv6_output.splitlines()[14]))
+                function_logger.info("host=%s %s" % (seed_hostname, ipv6_output.splitlines()[12]))
                 function_logger.info("host=%s %s" % (seed_hostname, ipv6_output.splitlines()[5]))
-                ipv6_pkts_sent = int(ipv6_output.splitlines()[14].split()[1])
-                ipv6_bytes_sent = int(ipv6_output.splitlines()[14].split()[3])
+                ipv6_pkts_sent = int(ipv6_output.splitlines()[12].split()[1])
+                ipv6_bytes_sent = int(ipv6_output.splitlines()[12].split()[3])
                 ipv6_pkts_rcvd = int(ipv6_output.splitlines()[5].split()[1])
                 ipv6_bytes_rcvd = int(ipv6_output.splitlines()[5].split()[3])
                 function_logger.info("hostname=%s ipv6_pkts_sent=%s ipv6_bytes_sent=%s ipv6_pkts_rcvd=%s ipv6_bytes_rcvd=%s "
