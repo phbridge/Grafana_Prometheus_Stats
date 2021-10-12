@@ -725,15 +725,20 @@ def login_to_host_combined(seed_hostname, seed_username, seed_password, device_O
     except IndexError:
         function_logger.warning("Index Error HOST=%s ##########" % seed_hostname)
         function_logger.warning("raw_output was %s" % str(qos_output_raw))
+        signal.alarm(0)
     except ValueError:
         function_logger.warning("Value Error HOST=%s ##########" % seed_hostname)
         function_logger.warning("raw_output was %s" % str(qos_output_raw))
+        signal.alarm(0)
     except paramiko.AuthenticationException:
         function_logger.warning("Auth Error HOST=%s" % seed_hostname)
+        signal.alarm(0)
     except paramiko.SSHException:
         function_logger.warning("SSH Error HOST=%s" % seed_hostname)
+        signal.alarm(0)
     except socket.error:
         function_logger.warning("Socket Error HOST=%s" % seed_hostname)
+        signal.alarm(0)
     except SSHTimeout:
         function_logger.warning("SSHTimeout error HOST=%s" % seed_hostname)
     except Exception as e:
@@ -742,6 +747,7 @@ def login_to_host_combined(seed_hostname, seed_username, seed_password, device_O
         function_logger.error("Unexpected error:%s" % str(sys.exc_info()[0]))
         function_logger.error("Unexpected error:%s" % str(e))
         function_logger.error("TRACEBACK=%s" % str(traceback.format_exc()))
+        signal.alarm(0)
     signal.alarm(0)
     function_logger.info("finishing on host=%s" % seed_hostname)
     return results
