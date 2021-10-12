@@ -169,6 +169,8 @@ def get_total_v4_v6_split(session, os_type, seed_hostname, interface, influx=Tru
     function_logger = logger.getChild("%s.%s.%s" % (inspect.stack()[2][3], inspect.stack()[1][3], inspect.stack()[0][3]))
     try:
         results = ""
+        ip_output = ""
+        ipv6_output = ""
         ip_output = run_command(session, "sho ip traffic interface %s" % interface, 1)
         if len(ip_output.splitlines()) > 16:
             ip_pkts_sent = int(ip_output.splitlines()[-6].split()[1])
