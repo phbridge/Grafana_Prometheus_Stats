@@ -94,7 +94,7 @@ THREAD_TO_BREAK = threading.Event()
 flask_app = Flask('router_nat_stats')
 
 
-def run_command(session, command, wait=2.5):
+def run_command(session, command, wait=4):
     output = ""
     session.send(command + "\n")
     time.sleep(wait)       # TODO implement something better than sleep here?
@@ -561,7 +561,7 @@ def login_to_host_combined(seed_hostname, seed_username, seed_password, device_O
     try:
         signal.signal(signal.SIGALRM, signal_handler)
         signal.signal(signal.SIGTERM, exit_handler)
-        signal.alarm(25)
+        signal.alarm(45)
 
         function_logger.debug(seed_hostname + " Starting connection")
         crawler_connection_pre.connect(hostname=seed_hostname, port=22, username=seed_username, password=seed_password,
@@ -569,7 +569,7 @@ def login_to_host_combined(seed_hostname, seed_username, seed_password, device_O
         function_logger.debug(seed_hostname + " Invoking Shell")
         crawler_connected = crawler_connection_pre.get_transport().open_session()
         crawler_connected.invoke_shell()
-        run_command(crawler_connected, "terminal length 0", 1.5)
+        run_command(crawler_connected, "terminal length 0")
         if router:
             nat_trans_total = get_total_nat_translations(crawler_connected, device_OS, seed_hostname)
             nat_trans_icmp = get_total_icmp_nat_translations(crawler_connected, device_OS, seed_hostname)
