@@ -219,7 +219,51 @@ def get_total_v4_v6_split(session, os_type, seed_hostname, interface, influx=Tru
                     results += 'ipv6_pkts_rcvd{host="%s"} %s\n' % (seed_hostname, str(ipv6_pkts_rcvd))
                     results += 'ipv6_bytes_rcvd{host="%s"} %s\n' % (seed_hostname, str(ipv6_bytes_rcvd))
         elif os_type == "IOS":
-            return ""
+            if len(ip_output.splitlines()) > 16:
+                function_logger.info("host=%s ip_length=%s" % (seed_hostname, len(ip_output.splitlines())))
+                function_logger.info("host=%s %s" % (seed_hostname, ip_output.splitlines()[14]))
+                function_logger.info("host=%s %s" % (seed_hostname, ip_output.splitlines()[5]))
+                ip_pkts_sent = int(ip_output.splitlines()[14].split()[1])
+                ip_bytes_sent = int(ip_output.splitlines()[14].split()[3])
+                ip_pkts_rcvd = int(ip_output.splitlines()[5].split()[1])
+                ip_bytes_rcvd = int(ip_output.splitlines()[5].split()[3])
+                function_logger.info("hostname=%s ip_pkts_sent=%s ip_bytes_sent=%s ip_pkts_rcvd=%s ip_bytes_rcvd=%s "
+                                     % (seed_hostname, ip_pkts_sent, ip_bytes_sent, ip_pkts_rcvd, ip_bytes_rcvd))
+                if influx:
+                    results += 'IP_Stats,host=%s,interface=%s ' \
+                               'ip_pkts_sent=%s,ip_bytes_sent=%s,' \
+                               'ip_pkts_rcvd=%s,ip_bytes_rcvd=%s \n' % \
+                               (seed_hostname, interface,
+                                str(ip_pkts_sent), str(ip_bytes_sent),
+                                str(ip_pkts_rcvd), str(ip_bytes_rcvd))
+                else:
+                    results += 'ip_pkts_sent{host="%s"} %s\n' % (seed_hostname, str(ip_pkts_sent))
+                    results += 'ip_bytes_sent{host="%s"} %s\n' % (seed_hostname, str(ip_bytes_sent))
+                    results += 'ip_pkts_rcvd{host="%s"} %s\n' % (seed_hostname, str(ip_pkts_rcvd))
+                    results += 'ip_bytes_rcvd{host="%s"} %s\n' % (seed_hostname, str(ip_bytes_rcvd))
+            if len(ipv6_output.splitlines()) > 16:
+                function_logger.info("host=%s ipv6_length=%s" % (seed_hostname, len(ipv6_output.splitlines())))
+                function_logger.info("host=%s %s" % (seed_hostname, ipv6_output.splitlines()[12]))
+                function_logger.info("host=%s %s" % (seed_hostname, ipv6_output.splitlines()[5]))
+                ipv6_pkts_sent = int(ipv6_output.splitlines()[12].split()[1])
+                ipv6_bytes_sent = int(ipv6_output.splitlines()[12].split()[3])
+                ipv6_pkts_rcvd = int(ipv6_output.splitlines()[5].split()[1])
+                ipv6_bytes_rcvd = int(ipv6_output.splitlines()[5].split()[3])
+                function_logger.info(
+                    "hostname=%s ipv6_pkts_sent=%s ipv6_bytes_sent=%s ipv6_pkts_rcvd=%s ipv6_bytes_rcvd=%s "
+                    % (seed_hostname, ipv6_pkts_sent, ipv6_bytes_sent, ipv6_pkts_rcvd, ipv6_bytes_rcvd))
+                if influx:
+                    results += 'IP_Stats,host=%s,interface=%s ' \
+                               'ip_pkts_sent=%s,ip_bytes_sent=%s,' \
+                               'ip_pkts_rcvd=%s,ip_bytes_rcvd=%s \n' % \
+                               (seed_hostname, interface,
+                                str(ipv6_pkts_sent), str(ipv6_bytes_sent),
+                                str(ipv6_pkts_rcvd), str(ipv6_bytes_rcvd))
+                else:
+                    results += 'ipv6_pkts_sent{host="%s"} %s\n' % (seed_hostname, str(ipv6_pkts_sent))
+                    results += 'ipv6_bytes_sent{host="%s"} %s\n' % (seed_hostname, str(ipv6_bytes_sent))
+                    results += 'ipv6_pkts_rcvd{host="%s"} %s\n' % (seed_hostname, str(ipv6_pkts_rcvd))
+                    results += 'ipv6_bytes_rcvd{host="%s"} %s\n' % (seed_hostname, str(ipv6_bytes_rcvd))
         else:
             function_logger.warning(seed_hostname + " ########## OS Not Supported for Active_NAT_TCP ##########")
             return ""
